@@ -28,7 +28,7 @@ The DSpinGNN (Spin-Disentangled Equivariant Graph Neural Network) is designed to
 
 The Hamiltonian used for the dynamics is defined as:
 
-$$H = H_{lattice}(\{R_i\}) + \sum_{i<j} J_{ij}(R_{ij}) \mathbf{S}_i \cdot \mathbf{S}_j$$
+$$H = H_{lattice}(\{R_i\}) + \sum_{i \lt j} J_{ij}(R_{ij}) \mathbf{S}_i \cdot \mathbf{S}_j$$
 
 ## 📂 Repository Structure
 ```
