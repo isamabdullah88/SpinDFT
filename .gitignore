@@ -2,6 +2,11 @@
 __pycache__/
 *.py[codz]
 *$py.class
+.DS_Store
+
+DataSets
+Outputs
+SSSP_1.3.0_PBE_efficiency
 
 # C extensions
 *.so
