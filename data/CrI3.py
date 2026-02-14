@@ -36,7 +36,7 @@ class CrI3Atom:
 
         # Create the Atoms Object
         self.atoms = Atoms('Cr2I6', positions=cart_positions, cell=cell, pbc=[True, True, True])
-        self.atoms.set_initial_magnetic_moments([3.0 if atom.symbol == 'Cr' else 0.0 for atom in self.atoms])
+        # self.atoms.set_initial_magnetic_moments([3.0 if atom.symbol == 'Cr' else 0.0 for atom in self.atoms])
 
     def write(self, filename="CrI3.cif"):
         self.atoms.write(filename)

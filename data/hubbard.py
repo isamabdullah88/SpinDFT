@@ -14,6 +14,7 @@ class EspressoHubbard:
         pass
 
     def parse(self, filepath, original_atoms):
+        print('Parsing QE Output: ', filepath)
         with open(filepath, 'r') as f:
             content = f.read()
             print('\nParsing!\n')
@@ -70,10 +71,14 @@ class EspressoHubbard:
             # This guarantees the properties are registered.
 
             # Calculate atomic moments estimate
-            cr_indices = [i for i, a in enumerate(atoms_out) if a.symbol == 'Cr']
-            per_cr_mag = total_mag / max(1, len(cr_indices))
+            cridx = [i for i, a in enumerate(atoms_out) if a.symbol == 'Cr']
+            cr2idx = [i for i, a in enumerate(atoms_out) if a.symbol == 'Cr2']
+            print('cr indices: ', cridx)
+            print('cr2 indices: ', cr2idx)
+            # per_cr_mag = total_mag / max(1, len(cr_indices))
             final_mags = np.zeros(len(atoms_out))
-            for i in cr_indices: final_mags[i] = per_cr_mag
+            for i in cridx: final_mags[i] = 3.0
+            for i in cr2idx: final_mags[i] = -3.0
 
             atoms_out.set_initial_magnetic_moments(final_mags)
             calc = SinglePointCalculator(
@@ -107,6 +112,65 @@ class EspressoHubbard:
             
             return atoms_out
 
+
+    def writeAFM(self, input_path):
+
+        """
+        with open(input_path, 'r') as f:
+            # f.write("\nHUBBARD (inter_atomic)\nU Cr-3d 3.0\n\n")
+            content = f.read()
+
+        lines = content.split('\n')
+        new_lines = []
+        cr_count = 0
+        in_pos_block = False
+        
+        for line in lines:
+            if 'ATOMIC_POSITIONS' in line:
+                in_pos_block = True
+                new_lines.append(line)
+                continue
+            
+            # Patch Atomic Positions
+            if in_pos_block and line.strip().startswith('Cr'):
+                cr_count += 1
+                if cr_count == 2:
+                    # Rename the second Chromium to Cr2
+                    new_lines.append(line.replace('Cr', 'Cr2', 1))
+                else:
+                    new_lines.append(line)
+            # Patch Atomic Species (Add Cr2)
+            elif 'ATOMIC_SPECIES' in line:
+                new_lines.append(line)
+                # We assume the next line is Cr. We print Cr, then Cr2.
+            elif line.strip().startswith('Cr') and not in_pos_block:
+                # Found the Cr species definition. Keep it, and duplicate it for Cr2.
+                new_lines.append(line)
+                # Create Cr2 line (Same mass, same pseudo)
+                parts = line.split()
+                # parts[0] is 'Cr', parts[1] is mass, parts[2] is pseudo
+                new_lines.append(f"Cr2 {parts[1]} {parts[2]}")
+            else:
+                new_lines.append(line)
+                
+        content = '\n'.join(new_lines)
+        
+        # Patch ntyp manually (2 -> 3)
+        content = re.sub(r'ntyp\s*=\s*2', 'ntyp = 3', content)
+        
+        # Append Hubbard U for both
+        content += "\nHUBBARD (atomic)\nU Cr-3d 3.0\nU Cr2-3d 3.0\n\n"
+        """
+
+        # Save patched file
+        with open(input_path, 'a') as f:
+            f.write("\nHUBBARD (atomic)\nU Cr-3d 3.0\nU Cr1-3d 3.0\n\n")
+
+        print('Hubbard AFM patch applied to input file.')
+
+
+
+
     def run_qe_manually(self, atoms, input_data, kpts, directory, command_prefix):
         """
         Manually writes input, appends Hubbard, runs PW.x, and reads output.
@@ -125,11 +189,11 @@ class EspressoHubbard:
             pseudopotentials=PSEUDOS, 
             kpts=kpts)
         
+        print('Write AFM')
         # 2. Append HUBBARD Card (The Patch)
-        with open(input_path, 'a') as f:
-            f.write("\nHUBBARD (inter_atomic)\nU Cr-3d 3.0\n\n")
-            # f.write("ATOMIC_SPECIES\n Cr1 51.9961 cr_pbe_v1.5.uspp.F.UPF\n Cr2 51.9961 cr_pbe_v1.5.uspp.F.UPF\n I 126.9045 I.pbe-n-kjpaw_psl.0.2.UPF\n")
+        self.writeAFM(input_path)
             
+        
         # 3. Execute Command
         # Syntax: mpirun ... pw.x -in espresso.pwi > espresso.pwo
         full_cmd = f"{command_prefix} pw.x -in {input_filename} > {output_filename}"
