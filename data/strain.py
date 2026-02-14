@@ -1,12 +1,12 @@
 import numpy as np
 from ase.io import read
 
-def prepare_cell_tasks(base_cell, num_total=100, num_workers=4):
+def prep_strains(basecell, num_total=100, num_workers=4):
     """
     Generates strained cell matrices and packages them for ProcessPoolExecutor.
     
     Args:
-        base_cell: The 3x3 numpy array or ASE Cell object from your relaxed structure.
+        basecell: The 3x3 numpy array or ASE Cell object from your relaxed structure.
         num_total: Total number of structures to generate.
         num_workers: Number of parallel workers (to assign worker_ids).
         
@@ -14,8 +14,8 @@ def prepare_cell_tasks(base_cell, num_total=100, num_workers=4):
         List of tuples: (strain_value, cell_matrix, worker_id, strain_label)
     """
     tasks = []
-    # Ensure base_cell is a numpy array for math operations
-    base_cell = np.array(base_cell)
+    # Ensure basecell is a numpy array for math operations
+    basecell = np.array(basecell)
     
     n_iso = int(num_total * 1)
     n_uni = int(num_total * 0.3)
@@ -23,7 +23,7 @@ def prepare_cell_tasks(base_cell, num_total=100, num_workers=4):
     
     # 1. Isotropic Strain (Uniform expansion/contraction)
     for i, s in enumerate(np.linspace(-0.05, 0.07, n_iso)):
-        new_cell = base_cell * (1 + s)
+        new_cell = basecell * (1 + s)
         
         task = (s, new_cell, i % num_workers, 'isotropic')
         tasks.append(task)
@@ -31,7 +31,7 @@ def prepare_cell_tasks(base_cell, num_total=100, num_workers=4):
     """
     # 2. Uniaxial Strain (Stretch X, keep Y and Z fixed)
     for i, s in enumerate(np.linspace(-0.05, 0.05, n_uni)):
-        new_cell = base_cell.copy()
+        new_cell = basecell.copy()
         new_cell[0] *= (1 + s) # Scale only the first lattice vector
         
         task = (s, new_cell, len(tasks) % num_workers, 'uniaxial_x')
@@ -39,9 +39,9 @@ def prepare_cell_tasks(base_cell, num_total=100, num_workers=4):
         
     # 3. Shear Strain (Tilt the lattice in the XY plane)
     for i, s in enumerate(np.linspace(-0.03, 0.03, n_shr)):
-        new_cell = base_cell.copy()
+        new_cell = basecell.copy()
         # Add a component of the second lattice vector to the first
-        new_cell[0] += base_cell[1] * s
+        new_cell[0] += basecell[1] * s
         
         task = (s, new_cell, len(tasks) % num_workers, 'shear_xy')
         tasks.append(task)

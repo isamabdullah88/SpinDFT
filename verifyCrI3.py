@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ase.db import connect
 
-db_name = 'DataSets/CrI3_Strained_Biaxial10.db'
+db_name = 'DataSets/CrI3_Strained_Biaxial_AFM.db'
 
 strains = []
 energies = []
@@ -14,23 +14,17 @@ print("-" * 80)
 
 with connect(db_name) as db:
     for row in db.select():
-        # 1. Extract Strain
-        # If 'strain_value' key is missing, try to infer from ID or set to 0
+        
         s = row['strain_value']
-            
-        # 2. Extract Energy
+        
         e = row.energy
         
-        # 3. Extract Magnetic Moment (Check first Cr atom)
-        # We handle cases where data might be missing
         if 'mag_moments' in row.data:
             m = row.data['mag_moments'][0] # First atom (Cr)
         else:
             m = 0.0
             
-        # 4. Extract Forces
-        # Calculate the magnitude of force on each atom: sqrt(fx^2 + fy^2 + fz^2)
-        # Then take the MAXIMUM force in the crystal.
+        # Max Force Calculation
         if 'forces' in row.data:
             forces = row.data['forces']
             # Linear algebra norm along axis 1 (atoms)
@@ -44,8 +38,6 @@ with connect(db_name) as db:
         mag_moms_cr.append(m)
         max_forces.append(f_max)
         
-        # Print Table Row
-        # Highlight bad magnetism in the printout
         mag_warning = " (!)" if abs(m) < 1.0 else ""
         print(f"{row.id:<20} | {s*100:>6.2f}% | {e:>12.4f} | {m:>12.4f}{mag_warning} | {f_max:>15.4f}")
 
@@ -55,10 +47,6 @@ strains = np.array(strains)[sorted_indices]
 energies = np.array(energies)[sorted_indices]
 mag_moms_cr = np.array(mag_moms_cr)[sorted_indices]
 max_forces = np.array(max_forces)[sorted_indices]
-
-print('strains: ', strains)
-print('energies: ', energies)
-print('mag_moms_cr: ', mag_moms_cr)
 
 # --- Plotting ---
 plt.figure(figsize=(15, 5))

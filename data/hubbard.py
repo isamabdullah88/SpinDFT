@@ -14,7 +14,6 @@ class EspressoHubbard:
         pass
 
     def parse(self, filepath, original_atoms):
-        print('Parsing QE Output: ', filepath)
         with open(filepath, 'r') as f:
             content = f.read()
             print('\nParsing!\n')
@@ -66,15 +65,9 @@ class EspressoHubbard:
             atoms_out = original_atoms.copy()
             atoms_out.calc = None 
     
-            # --- CRITICAL FIX: Explicit Results Assignment ---
-            # Instead of relying on constructor, we manually set the dictionary.
-            # This guarantees the properties are registered.
-
             # Calculate atomic moments estimate
             cridx = [i for i, a in enumerate(atoms_out) if a.symbol == 'Cr']
             cr2idx = [i for i, a in enumerate(atoms_out) if a.symbol == 'Cr2']
-            print('cr indices: ', cridx)
-            print('cr2 indices: ', cr2idx)
             # per_cr_mag = total_mag / max(1, len(cr_indices))
             final_mags = np.zeros(len(atoms_out))
             for i in cridx: final_mags[i] = 3.0
@@ -90,88 +83,22 @@ class EspressoHubbard:
                 magmoms=final_mags
             )
             
-
-            # print('Direct calculator call')
-            # calc.get_potential_energy()
-            # print('\n\n\nAfter calculator call\n\n\n')
-            
-            # Add array properties
             calc.results['magmoms'] = final_mags
             
-            # Attach extra attributes
             calc.efermi = efermi
             atoms_out.calc = calc
-            # print('Direct calculator call after magmoms set')
-            # calc.get_potential_energy()
-            # print('After calculator call after magmoms set\n\n\n')
-
-            # print('Atom get_potential_energy call')
-            # atoms_out.get_potential_energy()
-            # print('After atom get_potential_energy call\n\n\n')
-            # exit()
             
             return atoms_out
 
 
     def writeAFM(self, input_path):
 
-        """
-        with open(input_path, 'r') as f:
-            # f.write("\nHUBBARD (inter_atomic)\nU Cr-3d 3.0\n\n")
-            content = f.read()
-
-        lines = content.split('\n')
-        new_lines = []
-        cr_count = 0
-        in_pos_block = False
-        
-        for line in lines:
-            if 'ATOMIC_POSITIONS' in line:
-                in_pos_block = True
-                new_lines.append(line)
-                continue
-            
-            # Patch Atomic Positions
-            if in_pos_block and line.strip().startswith('Cr'):
-                cr_count += 1
-                if cr_count == 2:
-                    # Rename the second Chromium to Cr2
-                    new_lines.append(line.replace('Cr', 'Cr2', 1))
-                else:
-                    new_lines.append(line)
-            # Patch Atomic Species (Add Cr2)
-            elif 'ATOMIC_SPECIES' in line:
-                new_lines.append(line)
-                # We assume the next line is Cr. We print Cr, then Cr2.
-            elif line.strip().startswith('Cr') and not in_pos_block:
-                # Found the Cr species definition. Keep it, and duplicate it for Cr2.
-                new_lines.append(line)
-                # Create Cr2 line (Same mass, same pseudo)
-                parts = line.split()
-                # parts[0] is 'Cr', parts[1] is mass, parts[2] is pseudo
-                new_lines.append(f"Cr2 {parts[1]} {parts[2]}")
-            else:
-                new_lines.append(line)
-                
-        content = '\n'.join(new_lines)
-        
-        # Patch ntyp manually (2 -> 3)
-        content = re.sub(r'ntyp\s*=\s*2', 'ntyp = 3', content)
-        
-        # Append Hubbard U for both
-        content += "\nHUBBARD (atomic)\nU Cr-3d 3.0\nU Cr2-3d 3.0\n\n"
-        """
-
-        # Save patched file
-        with open(input_path, 'a') as f:
-            f.write("\nHUBBARD (atomic)\nU Cr-3d 3.0\nU Cr1-3d 3.0\n\n")
-
         print('Hubbard AFM patch applied to input file.')
 
 
 
 
-    def run_qe_manually(self, atoms, input_data, kpts, directory, command_prefix):
+    def runQE(self, atoms, input_data, kpts, directory, command_prefix):
         """
         Manually writes input, appends Hubbard, runs PW.x, and reads output.
         Bypasses ASE Calculator logic to prevent file overwrites/formatting bugs.
@@ -181,7 +108,7 @@ class EspressoHubbard:
         
         input_path = os.path.join(directory, input_filename)
         
-        # 1. Write Standard Input (Using ASE I/O directly)
+        # Write Standard Input
         write_espresso_in(input_path, 
             atoms, 
             format='espresso-in', 
@@ -189,13 +116,11 @@ class EspressoHubbard:
             pseudopotentials=PSEUDOS, 
             kpts=kpts)
         
-        print('Write AFM')
-        # 2. Append HUBBARD Card (The Patch)
-        self.writeAFM(input_path)
+        # HUBBARD Card
+        with open(input_path, 'a') as f:
+            f.write("\nHUBBARD (atomic)\nU Cr-3d 3.0\nU Cr1-3d 3.0\n\n")
             
-        
-        # 3. Execute Command
-        # Syntax: mpirun ... pw.x -in espresso.pwi > espresso.pwo
+        # Command to Run QE
         full_cmd = f"{command_prefix} pw.x -in {input_filename} > {output_filename}"
         
         try:
@@ -203,8 +128,9 @@ class EspressoHubbard:
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"QE Failed: {e}")
 
-        # 4. Read Results
-        xmlpath = os.path.join(directory, 'tmp', 'pwscf.xml')
+        # Parse Output
+        # xmlpath = os.path.join(directory, 'tmp', 'pwscf.xml')
         output_path = os.path.join(directory, output_filename)
 
-        return self.parse(output_path, atoms)
+        atomsout = self.parse(output_path, atoms)
+        return atomsout
