@@ -19,6 +19,7 @@ INPUT_SCF ={
         # "nosym": True,
         "starting_magnetization(1)": 3.0,
         "starting_magnetization(2)": -3.0,
+        "tot_magnetization": 0.0,
         "vdw_corr": "grimme-d3"
     },
     "electrons": {
