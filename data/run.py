@@ -27,11 +27,11 @@ def multiworker():
     
     # 3. Parallel Execution
     # tasks = [(eps, CORES_PER_JOB) for eps in strains]
-    tasks = prepare_cell_tasks(scf.atoms.get_cell(), num_workers=NUM_WORKERS, num_total=10)
+    tasks = prepare_cell_tasks(scf.atoms.get_cell(), num_workers=NUM_WORKERS, num_total=11)
     
     print(f"Starting Production Run...")
     
-    dbpath = './DataSets/CrI3_Strained_Biaxial_FM.db'
+    dbpath = './DataSets/CrI3_Strained_Biaxial_AFM.db'
     # os.makedirs(dbpath, exist_ok=True)
     
     # scf.run((0.0, 1)) # Test run for single strain value

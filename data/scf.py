@@ -29,9 +29,21 @@ class SCF:
         # strain_matrix = np.array([[1+strain, 0, 0], [0, 1+strain, 0], [0, 0, 1]])
         # self.atoms.set_cell(np.dot(cell, strain_matrix), scale_atoms=True)
         atoms = self.strainatoms(straincell)
+        atoms.set_tags([0] * len(atoms))
 
-        initmags = [3.0 if atom.symbol == 'Cr' else 0.0 for atom in atoms]
-        atoms.set_initial_magnetic_moments(initmags)
+        cridxs = [i for i, s in enumerate(atoms.get_chemical_symbols()) if s == 'Cr']
+        
+        # Atom 1: Tag 0 (Species: Cr)
+        # Atom 2: Tag 1 (Species: Cr1 or Cr_1 depending on ASE version)
+        atoms[cridxs[0]].tag = 0
+        atoms[cridxs[1]].tag = 1
+
+        init_mags = np.zeros(len(atoms))
+        init_mags[cridxs[0]] = 3.0 # First Cr (Always Up)
+        init_mags[cridxs[1]] = -3.0 # Second Cr (Down if AFM)
+        atoms.set_initial_magnetic_moments(init_mags)
+        # initmags = [3.0 if atom.symbol == 'Cr' else 0.0 for atom in atoms]
+        # atoms.set_initial_magnetic_moments(initmags)
         
         # Use the specific MPI command
         # profile = EspressoProfile(command=f"mpirun -np {numcores} pw.x", pseudo_dir=PSEUDO_DIR)
