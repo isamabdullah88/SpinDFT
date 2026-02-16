@@ -5,8 +5,9 @@ import os
 import numpy as np
 
 class SCF:
-    def __init__(self, worker_dir):
+    def __init__(self, worker_dir, phase='FM'):
         self.worker_dir = worker_dir
+        self.phase = phase
 
         self.atoms = CrI3Atom().atoms
 
@@ -14,6 +15,26 @@ class SCF:
         # Apply strain
         atoms = self.atoms.copy()
         atoms.set_cell(straincell, scale_atoms=True)
+        return atoms
+    
+    def initmags(self, atoms):
+        cridxs = [i for i, s in enumerate(atoms.get_chemical_symbols()) if s == 'Cr']
+
+        init_mags = np.zeros(len(atoms))
+
+        if self.phase == 'AFM':
+            # Tag Cr atoms for AFM ordering (Cr=0, Cr1=1)
+            atoms[cridxs[0]].tag = 0
+            atoms[cridxs[1]].tag = 1
+
+            init_mags[cridxs[0]] = 3.0 # First Cr (Always Up)
+            init_mags[cridxs[1]] = -3.0 # Second Cr (Down if AFM)
+        else:
+            # FM ordering (Both Cr atoms up)
+            init_mags[cridxs] = 3.0
+
+        atoms.set_initial_magnetic_moments(init_mags)
+
         return atoms
 
     def run(self, args):
@@ -26,20 +47,9 @@ class SCF:
         atoms = self.strainatoms(straincell)
         atoms.set_tags([0] * len(atoms))
 
-        cridxs = [i for i, s in enumerate(atoms.get_chemical_symbols()) if s == 'Cr']
+        atoms = self.initmags(atoms)
         
-        # Tag Cr atoms for AFM ordering (Cr=0, Cr1=1)
-        atoms[cridxs[0]].tag = 0
-        atoms[cridxs[1]].tag = 1
-
-        init_mags = np.zeros(len(atoms))
-        init_mags[cridxs[0]] = 3.0 # First Cr (Always Up)
-        init_mags[cridxs[1]] = -3.0 # Second Cr (Down if AFM)
-        atoms.set_initial_magnetic_moments(init_mags)
-        
-        import time
-        starttm = time.time()
-        espressohub = EspressoHubbard()
+        espressohub = EspressoHubbard(phase=self.phase)
         atomsout = espressohub.runQE(
             atoms, 
             INPUT_SCF, 
@@ -47,7 +57,6 @@ class SCF:
             directory=worker_dir, 
             command_prefix=f"mpirun -np 1"
         )
-        print('SCF Completed in {time:.2f} seconds'.format(time=time.time() - starttm))
         
         result = {
             'strain': strain,

@@ -6,6 +6,7 @@ from concurrent.futures import ProcessPoolExecutor
 from ase.db import connect
 from tqdm import tqdm
 from .strain import prep_strains
+from .config import PHASE
 
 
 def multiworker():
@@ -19,14 +20,14 @@ def multiworker():
 
     worker_dir = f"./DataSets/CrI3/"
     os.makedirs(worker_dir, exist_ok=True)
-    scf = SCF(worker_dir=worker_dir)
+    scf = SCF(worker_dir=worker_dir, phase=PHASE)
     
     # Generate strain tasks
-    tasks = prep_strains(scf.atoms.get_cell(), num_workers=NUM_WORKERS, num_total=11)
+    tasks = prep_strains(scf.atoms.get_cell(), num_workers=NUM_WORKERS, num_total=15)
     
     print(f"Starting Production Run...")
     
-    dbpath = './DataSets/CrI3_Strained_Biaxial_AFM.db'
+    dbpath = './DataSets/CrI3_Strained_Biaxial_FM2.db'
 
     with connect(dbpath) as db, ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
         for res in tqdm(executor.map(scf.run, tasks), total=len(tasks)):
