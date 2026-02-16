@@ -6,13 +6,13 @@ class CrI3Atom:
     def __init__(self, a=6.867, c=18.0):
         a = 7.348
         c = 19.260
-        # 1. Define physical thickness (distance Cr to I plane) in Angstroms
+        # Physical thickness (distance Cr to I plane) in Angstroms
         dz_physical = 1.348
         
-        # 2. Calculate the fractional offset for any 'c'
+        # Fractional offset for any 'c'
         z_offset = dz_physical / c 
         
-        # 3. Define fractional coordinates relative to the center (0.5)
+        # Fractional coordinates relative to the center (0.5)
         z_high = 0.5 + z_offset
         z_low  = 0.5 - z_offset
 
@@ -36,7 +36,6 @@ class CrI3Atom:
 
         # Create the Atoms Object
         self.atoms = Atoms('Cr2I6', positions=cart_positions, cell=cell, pbc=[True, True, True])
-        self.atoms.set_initial_magnetic_moments([3.0 if atom.symbol == 'Cr' else 0.0 for atom in self.atoms])
 
     def write(self, filename="CrI3.cif"):
         self.atoms.write(filename)

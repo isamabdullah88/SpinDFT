@@ -5,37 +5,29 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 from ase.db import connect
 from tqdm import tqdm
-from .strain import prepare_cell_tasks
+from .strain import prep_strains
+from .config import PHASE
 
 
 def multiworker():
-    # strains = np.linspace(-0.1, 0.1, 30) # Generate 12 data points
-    # strains = [0]
-    
     TOTAL_CORES = os.cpu_count() - 4
     CORES_PER_JOB = 1 # Optimal for small unit cells. 
     NUM_WORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
-    # NUM_WORKERS = 1
-
+    
     print(f"--- Resource Optimization ---")
     print(f"Total Cores Detected: {TOTAL_CORES}")
     print(f"Running {NUM_WORKERS} concurrent jobs with {CORES_PER_JOB} cores each.")
 
     worker_dir = f"./DataSets/CrI3/"
     os.makedirs(worker_dir, exist_ok=True)
-    scf = SCF(worker_dir=worker_dir)
+    scf = SCF(worker_dir=worker_dir, phase=PHASE)
     
-    # 3. Parallel Execution
-    # tasks = [(eps, CORES_PER_JOB) for eps in strains]
-    tasks = prepare_cell_tasks(scf.atoms.get_cell(), num_workers=NUM_WORKERS, num_total=10)
+    # Generate strain tasks
+    tasks = prep_strains(scf.atoms.get_cell(), num_workers=NUM_WORKERS, num_total=15)
     
     print(f"Starting Production Run...")
     
-    dbpath = './DataSets/CrI3_Strained_Biaxial_FM.db'
-    # os.makedirs(dbpath, exist_ok=True)
-    
-    # scf.run((0.0, 1)) # Test run for single strain value
-    # exit()
+    dbpath = './DataSets/CrI3_Strained_Biaxial_FM2.db'
 
     with connect(dbpath) as db, ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
         for res in tqdm(executor.map(scf.run, tasks), total=len(tasks)):

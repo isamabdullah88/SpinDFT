@@ -1,13 +1,13 @@
-from ase.calculators.espresso import EspressoProfile, Espresso
 from .hubbard import EspressoHubbard
 from .CrI3 import CrI3Atom
-from .config import INPUT_SCF, PSEUDOS, PSEUDO_DIR
+from .config import INPUT_SCF
 import os
 import numpy as np
 
 class SCF:
-    def __init__(self, worker_dir):
+    def __init__(self, worker_dir, phase='FM'):
         self.worker_dir = worker_dir
+        self.phase = phase
 
         self.atoms = CrI3Atom().atoms
 
@@ -16,52 +16,47 @@ class SCF:
         atoms = self.atoms.copy()
         atoms.set_cell(straincell, scale_atoms=True)
         return atoms
+    
+    def initmags(self, atoms):
+        cridxs = [i for i, s in enumerate(atoms.get_chemical_symbols()) if s == 'Cr']
+
+        init_mags = np.zeros(len(atoms))
+
+        if self.phase == 'AFM':
+            # Tag Cr atoms for AFM ordering (Cr=0, Cr1=1)
+            atoms[cridxs[0]].tag = 0
+            atoms[cridxs[1]].tag = 1
+
+            init_mags[cridxs[0]] = 3.0 # First Cr (Always Up)
+            init_mags[cridxs[1]] = -3.0 # Second Cr (Down if AFM)
+        else:
+            # FM ordering (Both Cr atoms up)
+            init_mags[cridxs] = 3.0
+
+        atoms.set_initial_magnetic_moments(init_mags)
+
+        return atoms
 
     def run(self, args):
         strain, straincell, wid, slabel = args
 
-        # Unique directory for this worker/strain
         worker_dir = self.worker_dir + f"_strain_{slabel}_{strain:.4f}"
         os.makedirs(worker_dir, exist_ok=True)
 
-        # Apply Strain (Biaxial)
-        # cell = self.atoms.get_cell()
-        # strain_matrix = np.array([[1+strain, 0, 0], [0, 1+strain, 0], [0, 0, 1]])
-        # self.atoms.set_cell(np.dot(cell, strain_matrix), scale_atoms=True)
+        # Apply Strain
         atoms = self.strainatoms(straincell)
+        atoms.set_tags([0] * len(atoms))
 
-        initmags = [3.0 if atom.symbol == 'Cr' else 0.0 for atom in atoms]
-        atoms.set_initial_magnetic_moments(initmags)
+        atoms = self.initmags(atoms)
         
-        # Use the specific MPI command
-        # profile = EspressoProfile(command=f"mpirun -np {numcores} pw.x", pseudo_dir=PSEUDO_DIR)
-        # print(f"Running SCF with command: mpirun -np {numcores} pw.x")
-        
-        # self.atoms.calc = EspressoHubbard(
-        #     profile=profile,
-        #     pseudopotentials=PSEUDOS,
-        #     input_data=INPUT_SCF,
-        #     kpts=(3, 3, 1),
-        #     directory=self.worker_dir + f"_strain_{strain:.4f}"
-        # )
-        import time
-        starttm = time.time()
-        espressohub = EspressoHubbard()
-        atomsout = espressohub.run_qe_manually(
+        espressohub = EspressoHubbard(phase=self.phase)
+        atomsout = espressohub.runQE(
             atoms, 
             INPUT_SCF, 
             kpts=(2, 2, 1), 
             directory=worker_dir, 
             command_prefix=f"mpirun -np 1"
         )
-        print('SCF Completed in {time:.2f} seconds'.format(time=time.time() - starttm))
-
-        # self.atoms.calc.write_input(self.atoms)
-
-        # import pprint
-        # pprint.pprint(INPUT_SCF)
-        # print('PARSED')
-        # pprint.pprint(self.atoms.calc.parameters['input_data'])
         
         result = {
             'strain': strain,
@@ -69,7 +64,6 @@ class SCF:
             'status': 'INIT'
         }
 
-        # try:
         energy = atomsout.get_potential_energy()
         moms = atomsout.get_magnetic_moments()
         forces = atomsout.get_forces()
@@ -85,11 +79,7 @@ class SCF:
         })
 
         print(f"Strain {strain:.4f}: SCF SUCCESS - Energy: {energy:.4f} eV, Mag Moments: {moms}")
-                
-        # except Exception as e:
-        #     result['status'] = f"SCF_FAIL: {str(e)}"
-        #     return result
-        
+
         return result
         
 
