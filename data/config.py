@@ -18,8 +18,8 @@ INPUT_SCF ={
         "nspin": 2,
         # "nosym": True,
         "starting_magnetization(1)": 3.0,
-        "starting_magnetization(2)": -3.0,
-        "tot_magnetization": 0.0,
+        "starting_magnetization(2)": 0.0,
+        # "tot_magnetization": 0.0,
         "vdw_corr": "grimme-d3"
     },
     "electrons": {
@@ -30,6 +30,8 @@ INPUT_SCF ={
         "mixing_mode": "local-TF"
     }
 }
+
+PHASE = 'FM'
 
 PSEUDOS = {
     "Cr": "cr_pbe_v1.5.uspp.F.UPF",
