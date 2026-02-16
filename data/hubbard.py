@@ -8,10 +8,10 @@ from ase.calculators.singlepoint import SinglePointCalculator
 from .config import PSEUDOS
 
 class EspressoHubbard:
-    def __init__(self):
-        pass
+    def __init__(self, phase='FM'):
+        self.phase = phase
 
-    def parse(self, filepath, original_atoms):
+    def parse(self, filepath, atoms):
         with open(filepath, 'r') as f:
             content = f.read()
 
@@ -35,14 +35,14 @@ class EspressoHubbard:
             total_mag = float(m_match.group(1)) if m_match else 0.0
             
             # Forces
-            forces = np.zeros((len(original_atoms), 3))
+            forces = np.zeros((len(atoms), 3))
             f_pattern = r'atom\s+(\d+)\s+type\s+\d+\s+force\s+=\s+([-.\d]+)\s+([-.\d]+)\s+([-.\d]+)'
             f_matches = re.findall(f_pattern, content)
             RY_AU_TO_EV_ANG = 25.71104309541616 
             
             for atom_idx, fx, fy, fz in f_matches:
                 idx = int(atom_idx) - 1
-                if idx < len(original_atoms):
+                if idx < len(atoms):
                     forces[idx] = [float(fx), float(fy), float(fz)]
                     forces[idx] *= RY_AU_TO_EV_ANG
 
@@ -59,20 +59,20 @@ class EspressoHubbard:
                                         stress[1,2], stress[0,2], stress[0,1]])
 
             # Reconstruct
-            atoms_out = original_atoms.copy()
-            atoms_out.calc = None 
+            atomsout = atoms.copy()
+            atomsout.calc = None 
     
             # Calculate atomic moments estimate
-            cridx = [i for i, a in enumerate(atoms_out) if a.symbol == 'Cr']
-            cr2idx = [i for i, a in enumerate(atoms_out) if a.symbol == 'Cr2']
+            cridx = [i for i, a in enumerate(atomsout) if a.symbol == 'Cr']
+            cr2idx = [i for i, a in enumerate(atomsout) if a.symbol == 'Cr2']
             # per_cr_mag = total_mag / max(1, len(cr_indices))
-            final_mags = np.zeros(len(atoms_out))
+            final_mags = np.zeros(len(atomsout))
             for i in cridx: final_mags[i] = 3.0
             for i in cr2idx: final_mags[i] = -3.0
 
-            atoms_out.set_initial_magnetic_moments(final_mags)
+            atomsout.set_initial_magnetic_moments(final_mags)
             calc = SinglePointCalculator(
-                atoms_out,
+                atomsout,
                 energy=energy_ev,
                 forces=forces,
                 stress=stress_voigt,
@@ -83,9 +83,9 @@ class EspressoHubbard:
             calc.results['magmoms'] = final_mags
             
             calc.efermi = efermi
-            atoms_out.calc = calc
+            atomsout.calc = calc
             
-            return atoms_out
+            return atomsout
 
 
     def runQE(self, atoms, input_data, kpts, directory, command_prefix):
@@ -108,7 +108,10 @@ class EspressoHubbard:
         
         # HUBBARD Card
         with open(inputpath, 'a') as f:
-            f.write("\nHUBBARD (atomic)\nU Cr-3d 3.0\nU Cr1-3d 3.0\n\n")
+            if self.phase == 'AFM':
+                f.write("\nHUBBARD (atomic)\nU Cr-3d 3.0\nU Cr1-3d 3.0\n\n")
+            else:
+                f.write("\nHUBBARD (atomic)\nU Cr-3d 3.0\n\n")
             
         # Command to Run QE
         full_cmd = f"{command_prefix} pw.x -in {intputname} > {outputname}"
@@ -119,8 +122,8 @@ class EspressoHubbard:
             raise RuntimeError(f"QE Failed: {e}")
 
         # Parse Output
-        # xmlpath = os.path.join(directory, 'tmp', 'pwscf.xml')
         output_path = os.path.join(directory, outputname)
 
         atomsout = self.parse(output_path, atoms)
+        
         return atomsout
