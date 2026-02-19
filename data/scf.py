@@ -5,18 +5,27 @@ import os
 import numpy as np
 
 class SCF:
-    def __init__(self, worker_dir, phase='FM'):
-        self.worker_dir = worker_dir
+    # ---------------------------------------------------------------------------------------------
+    def __init__(self, wkdir, nworkers, kpts, phase='FM'):
+        self.wkdir = wkdir
+        self.nworkers = nworkers
+        self.kpts = kpts
         self.phase = phase
 
         self.atoms = CrI3Atom().atoms
 
+    # ---------------------------------------------------------------------------------------------
     def strainatoms(self, straincell):
         # Apply strain
         atoms = self.atoms.copy()
+
+        if straincell is None:
+            return atoms
+        
         atoms.set_cell(straincell, scale_atoms=True)
         return atoms
     
+    # ---------------------------------------------------------------------------------------------
     def initmags(self, atoms):
         cridxs = [i for i, s in enumerate(atoms.get_chemical_symbols()) if s == 'Cr']
 
@@ -37,25 +46,30 @@ class SCF:
 
         return atoms
 
-    def run(self, args):
-        strain, straincell, wid, slabel = args
+    # ---------------------------------------------------------------------------------------------
+    def run(self, args, vcrelax=False):
 
-        worker_dir = self.worker_dir + f"_strain_{slabel}_{strain:.4f}"
-        os.makedirs(worker_dir, exist_ok=True)
+        if not vcrelax:
+            strain, straincell, wid, slabel = args
 
-        # Apply Strain
-        atoms = self.strainatoms(straincell)
-        atoms.set_tags([0] * len(atoms))
+            # Apply Strain
+            atoms = self.strainatoms(straincell)
+        else:
+            atoms = self.strainatoms(None)
+            slabel, strain = 'vc_relax', 0.0
+            
+        # atoms.set_tags([0] * len(atoms))
 
         atoms = self.initmags(atoms)
         
+        wkdir = self.wkdir + f"_strain_{slabel}_{strain:.4f}"
+        os.makedirs(wkdir, exist_ok=True)
         espressohub = EspressoHubbard(phase=self.phase)
         atomsout = espressohub.runQE(
             atoms, 
             INPUT_SCF, 
-            kpts=(2, 2, 1), 
-            directory=worker_dir, 
-            command_prefix=f"mpirun -np 1"
+            kpts=self.kpts, 
+            directory=wkdir
         )
         
         result = {
@@ -78,11 +92,13 @@ class SCF:
             'atoms': atomsout
         })
 
-        print(f"Strain {strain:.4f}: SCF SUCCESS - Energy: {energy:.4f} eV, Mag Moments: {moms}")
+        # print(f"Strain {strain:.4f}: SCF SUCCESS - Energy: {energy:.4f} eV, Mag Moments: {moms}")
 
         return result
         
 
+# ---------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
 if __name__ == "__main__":
     TOTAL_CORES = os.cpu_count()
     CORES_PER_JOB = 8 # Optimal for small unit cells. 
@@ -93,9 +109,9 @@ if __name__ == "__main__":
     print(f"Running {NUM_WORKERS} concurrent jobs with {CORES_PER_JOB} cores each.")
 
     strain = 0.0
-    worker_dir = f"./DataSets/CrI3/Strain_{strain:.4f}"
-    os.makedirs(worker_dir, exist_ok=True)
+    wkdir = f"./DataSets/CrI3/Strain_{strain:.4f}"
+    os.makedirs(wkdir, exist_ok=True)
 
-    scf = SCF(worker_dir=worker_dir)
+    scf = SCF(wkdir=wkdir)
     result = scf.run((strain, CORES_PER_JOB))
     print(result)
