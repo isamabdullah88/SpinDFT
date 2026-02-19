@@ -29,11 +29,11 @@ PSEUDOS = {
 # We split the machine into chunks of 'CORES_PER_JOB'.
 TOTAL_CORES = os.cpu_count()
 CORES_PER_JOB = 8 # Optimal for small unit cells. 
-NUM_WORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
+NWORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
 
 print(f"--- Resource Optimization ---")
 print(f"Total Cores Detected: {TOTAL_CORES}")
-print(f"Running {NUM_WORKERS} concurrent jobs with {CORES_PER_JOB} cores each.")
+print(f"Running {NWORKERS} concurrent jobs with {CORES_PER_JOB} cores each.")
 
 # Try to load JSON, fall back to default if file missing
 try:
@@ -225,15 +225,15 @@ def main():
     base_dict = atoms_base.asdict()
     
     # 3. Parallel Execution
-    tasks = [(eps, base_dict, i % NUM_WORKERS) for i, eps in enumerate(strains)]
+    tasks = [(eps, base_dict, i % NWORKERS) for i, eps in enumerate(strains)]
     
     print(f"Starting Production Run...")
     
     os.makedirs(os.path.dirname(CONFIG_PATHS['db_output']), exist_ok=True)
     
-    with connect(CONFIG_PATHS['db_output']) as db, ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
+    with connect(CONFIG_PATHS['db_output']) as db, ProcessPoolExecutor(max_workers=NWORKERS) as executor:
         for res in executor.map(run_full_pipeline, tasks):
-            print(f"Strain {res['strain']:.4f}: {res['status']}")
+            # print(f"Strain {res['strain']:.4f}: {res['status']}")
             
             if 'energy' in res:
                 db.write(res['atoms'], 
