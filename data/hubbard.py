@@ -1,19 +1,98 @@
 import subprocess
 import os
 import re
+import io
 import numpy as np
-from ase.io.espresso import write_espresso_in
+from ase.io.espresso import write_espresso_in, read_espresso_out
 from ase.calculators.singlepoint import SinglePointCalculator
 
 from .config import PSEUDOS
 
 class EspressoHubbard:
+    # ---------------------------------------------------------------------------------------------
     def __init__(self, phase='FM'):
         self.phase = phase
 
+
+    def parseatoms(self, content, atoms):
+        # --- 1. GET RELAXED GEOMETRY (CUSTOM PARSER) ---
+        # Bypassing ASE's read_espresso_out completely to avoid the AssertionError
+        relaxed_atoms = atoms.copy()
+        
+        try:
+            # A. Parse Final Cell (if CELL_PARAMETERS is present in the output)
+            cell_idx = content.rfind('CELL_PARAMETERS')
+            if cell_idx != -1:
+                block = content[cell_idx:].split('\n')
+                unit_match = re.search(r'\((.*?)\)', block[0])
+                unit = unit_match.group(1).strip().lower() if unit_match else 'angstrom'
+                
+                # Extract the 3x3 matrix lines
+                v1 = [float(x) for x in block[1].split()[:3]]
+                v2 = [float(x) for x in block[2].split()[:3]]
+                v3 = [float(x) for x in block[3].split()[:3]]
+                cell = np.array([v1, v2, v3])
+                
+                # Convert to Angstroms if needed
+                if unit == 'bohr':
+                    cell *= 0.529177210903
+                elif unit == 'alat':
+                    alat_match = re.search(r'celldm\(1\)=\s*([-.\d]+)', content)
+                    if alat_match:
+                        cell *= float(alat_match.group(1)) * 0.529177210903
+                
+                relaxed_atoms.set_cell(cell)
+
+            # B. Parse Final Positions (if ATOMIC_POSITIONS is present)
+            pos_idx = content.rfind('ATOMIC_POSITIONS')
+            if pos_idx != -1:
+                block = content[pos_idx:].split('\n')
+                unit_match = re.search(r'\((.*?)\)', block[0])
+                unit = unit_match.group(1).strip().lower() if unit_match else 'crystal'
+                
+                positions = []
+                for line in block[1:]:
+                    parts = line.split()
+                    # An atom line has >=4 parts and starts with a chemical symbol
+                    if len(parts) >= 4 and re.match(r'^[A-Za-z]+', parts[0]):
+                        try:
+                            positions.append([float(parts[1]), float(parts[2]), float(parts[3])])
+                        except ValueError:
+                            break # End of atomic block
+                    else:
+                        break # End of atomic block
+                        
+                # Only apply if we extracted the correct number of atoms
+                if len(positions) == len(relaxed_atoms):
+                    positions = np.array(positions)
+                    if unit == 'angstrom':
+                        relaxed_atoms.set_positions(positions)
+                    elif unit == 'bohr':
+                        relaxed_atoms.set_positions(positions * 0.529177210903)
+                    elif unit == 'crystal':
+                        relaxed_atoms.set_scaled_positions(positions)
+                    elif unit == 'alat':
+                        alat_match = re.search(r'celldm\(1\)=\s*([-.\d]+)', content)
+                        if alat_match:
+                            relaxed_atoms.set_positions(positions * float(alat_match.group(1)) * 0.529177210903)
+                            
+        except Exception as e:
+            print(f"Warning: Custom Geometry Parse failed ({e}). Returning unrelaxed structure!")
+            relaxed_atoms = atoms.copy()
+
+        return relaxed_atoms
+
+    # ---------------------------------------------------------------------------------------------
     def parse(self, filepath, atoms):
+
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Output file not found: {filepath}")
+        
         with open(filepath, 'r') as f:
             content = f.read()
+
+            # Parse geometry
+            atomsout = self.parseatoms(content, atoms)
 
             # Parse Energy
             e_match = re.search(r'!\s+total energy\s+=\s+([-.\d]+)\s+Ry', content)
@@ -35,14 +114,14 @@ class EspressoHubbard:
             total_mag = float(m_match.group(1)) if m_match else 0.0
             
             # Forces
-            forces = np.zeros((len(atoms), 3))
+            forces = np.zeros((len(atomsout), 3))
             f_pattern = r'atom\s+(\d+)\s+type\s+\d+\s+force\s+=\s+([-.\d]+)\s+([-.\d]+)\s+([-.\d]+)'
             f_matches = re.findall(f_pattern, content)
             RY_AU_TO_EV_ANG = 25.71104309541616 
             
             for atom_idx, fx, fy, fz in f_matches:
                 idx = int(atom_idx) - 1
-                if idx < len(atoms):
+                if idx < len(atomsout):
                     forces[idx] = [float(fx), float(fy), float(fz)]
                     forces[idx] *= RY_AU_TO_EV_ANG
 
@@ -59,7 +138,7 @@ class EspressoHubbard:
                                         stress[1,2], stress[0,2], stress[0,1]])
 
             # Reconstruct
-            atomsout = atoms.copy()
+            # atomsout = atoms.copy()
             atomsout.calc = None 
     
             # Calculate atomic moments estimate
@@ -88,15 +167,16 @@ class EspressoHubbard:
             return atomsout
 
 
-    def runQE(self, atoms, input_data, kpts, directory, command_prefix):
+    # ---------------------------------------------------------------------------------------------
+    def runQE(self, atoms, input_data, kpts, directory):
         """
         Manually writes input, appends Hubbard, runs PW.x, and reads output.
         Bypasses ASE Calculator logic to prevent file overwrites/formatting bugs.
         """
-        intputname = 'espresso.pwi'
-        outputname = 'espresso.pwo'
+        inname = 'espresso.pwi'
+        outname = 'espresso.pwo'
         
-        inputpath = os.path.join(directory, intputname)
+        inputpath = os.path.join(directory, inname)
         
         # Write Standard Input
         write_espresso_in(inputpath, 
@@ -114,16 +194,32 @@ class EspressoHubbard:
                 f.write("\nHUBBARD (atomic)\nU Cr-3d 3.0\n\n")
             
         # Command to Run QE
-        full_cmd = f"{command_prefix} pw.x -in {intputname} > {outputname}"
+        cmd = f"mpirun -np 1 pw.x -in {inname} > {outname}"
         
         try:
-            subprocess.run(full_cmd, shell=True, cwd=directory, check=True)
+            subprocess.run(cmd, shell=True, cwd=directory, check=True)
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"QE Failed: {e}")
 
         # Parse Output
-        output_path = os.path.join(directory, outputname)
+        outpath = os.path.join(directory, outname)
 
-        atomsout = self.parse(output_path, atoms)
+        atomsout = self.parse(outpath, atoms)
         
         return atomsout
+    
+
+if __name__ == "__main__":
+    from ase.db import connect
+    from .CrI3 import CrI3Atom
+    hubbardcalc = EspressoHubbard(phase='AFM')
+
+    atoms = CrI3Atom().atoms
+    atoms = hubbardcalc.parse('DataSets/CrI3/VCRELAX/espresso.pwo', atoms)
+
+    energy = atoms.get_potential_energy()
+    moms = atoms.get_magnetic_moments()
+    forces = atoms.get_forces()
+
+    with connect('VCRELAX.db') as db:
+        db.write(atoms, data={'energy': energy, 'moms': moms, 'forces': forces})
