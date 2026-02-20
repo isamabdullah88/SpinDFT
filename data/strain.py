@@ -1,7 +1,7 @@
 import numpy as np
 from ase.io import read
 
-def prep_strains(bcell, count=100, nworkers=4):
+def prep_strains(count=100):
     """
     Generates strained cell matrices and packages them for ProcessPoolExecutor.
     
@@ -15,37 +15,45 @@ def prep_strains(bcell, count=100, nworkers=4):
     """
     tasks = []
     # Ensure bcell is a numpy array for math operations
-    bcell = np.array(bcell)
+    # bcell = np.array(bcell)
     
-    n_iso = int(count * 1)
-    n_uni = int(count * 0.3)
-    n_shr = count - n_iso - n_uni
+    niso = int(count * 1)
+    nuni = int(count * 1)
+    # nshr = count - niso - nuni
+    nshr = int(count * 1)
     
-    # 1. Isotropic Strain (Uniform expansion/contraction)
-    for i, s in enumerate(np.linspace(-0.08, 0.1, n_iso)):
-        ncell = bcell * (1 + s)
+    # Isotropic Strain (Uniform expansion/contraction)
+    # for i, s in enumerate(np.linspace(-0.08, 0.1, niso)):
+    #     ncell = bcell * (1 + s)
         
-        task = (s, ncell, i % nworkers, 'isotropic')
+    #     task = (s, ncell, i % nworkers, 'isotropic')
+    #     tasks.append(task)
+        
+    # Uniaxial Strain (Stretch X, keep Y and Z fixed)
+    for i, s in enumerate(np.linspace(-0.15, -0.01, nuni)):
+        # ncell = bcell.copy()
+        # ncell[0] *= (1 + s) # Scale only the first lattice vector
+        
+        task = (s, 'Uniaxial_X')
         tasks.append(task)
         
-    """
-    # 2. Uniaxial Strain (Stretch X, keep Y and Z fixed)
-    for i, s in enumerate(np.linspace(-0.05, 0.05, n_uni)):
-        ncell = bcell.copy()
-        ncell[0] *= (1 + s) # Scale only the first lattice vector
+    # Shear Strain (Tilt the lattice in the XY plane)
+    # for i, s in enumerate(np.linspace(-0.03, 0.03, nshr)):
+    #     ncell = bcell.copy()
+    #     # Add a component of the second lattice vector to the first
+    #     ncell[0] += bcell[1] * s
         
-        task = (s, ncell, len(tasks) % nworkers, 'uniaxial_x')
-        tasks.append(task)
-        
-    # 3. Shear Strain (Tilt the lattice in the XY plane)
-    for i, s in enumerate(np.linspace(-0.03, 0.03, n_shr)):
-        ncell = bcell.copy()
-        # Add a component of the second lattice vector to the first
-        ncell[0] += bcell[1] * s
-        
-        task = (s, ncell, len(tasks) % nworkers, 'shear_xy')
-        tasks.append(task)
-    """
+    #     task = (s, ncell, len(tasks) % nworkers, 'shear_xy')
+    #     tasks.append(task)
+
+    # for i, (u, s) in enumerate(zip(np.linspace(-0.30, 0.30, nuni), np.linspace(-0.30, 0.30, nshr))):
+    #     ncell = bcell.copy()
+    #     ncell[0] *= (1 + u) # Scale only the first lattice vector
+
+    #     ncell[0] += bcell[1] * s # Shear
+
+    #     task = (s, ncell, len(tasks) % nworkers, 'uniaxial_x-shear_xy')
+    #     tasks.append(task)
         
     return tasks
 
