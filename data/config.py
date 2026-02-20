@@ -1,8 +1,12 @@
 import os
+from datetime import datetime
 
-PHASE = 'AFM'
-RELAX = True
+PHASE = 'FM'
+RELAX = False
 VCRELAX = False
+
+WKDIR = f"./DataSets/CrI3/{PHASE}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+RELAXED_DIR = f"./DataSets/CrI3-Relax/{PHASE}/RelaxedAtoms"
 
 INPUT_SCF ={
     "control": {
