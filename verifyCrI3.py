@@ -95,8 +95,8 @@ if __name__ == "__main__":
     strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=True)
 
     plt.figure(figsize=(10, 5))
-    plt.plot(strainFM, energiesFM, 'o-', label='FM (5)', c='b')
-    plt.plot(strainAFM, energiesAFM, 's-', label='AFM (5)', c='r')
+    plt.plot(strainFM, energiesFM, 'o-', label='FM', c='b')
+    plt.plot(strainAFM, energiesAFM, 's-', label='AFM', c='r')
     
     plt.xlabel('Strain Index')
     plt.ylabel('Total Energy (eV)')

@@ -1,8 +1,8 @@
 import os
 
-PHASE = 'FM'
-RELAX = False
-VCRELAX = True
+PHASE = 'AFM'
+RELAX = True
+VCRELAX = False
 
 INPUT_SCF ={
     "control": {
@@ -16,7 +16,7 @@ INPUT_SCF ={
         'forc_conv_thr': 1.0e-4
     },
     "system": {
-        "ecutwfc": 30,
+        "ecutwfc": 40,
         "ecutrho": 320,
         "occupations": "smearing",
         "smearing": "mv",
