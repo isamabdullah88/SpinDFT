@@ -88,15 +88,16 @@ def sanitycheck(dbpath, plot=True):
 
 
 if __name__ == "__main__":
-    dbpathFM = 'DataSets/CrI3_Strained_Biaxial_FM2.db'
-    dbpathAFM = 'DataSets/CrI3_Strained_Biaxial_AFM2.db'
+    dbpathFM = 'DataSets/CrI3/FM/CrI3_Uniaxial_VC_FM.db'
+    dbpathAFM = 'DataSets/CrI3/AFM/CrI3_Uniaxial_VC_AFM.db'
 
-    strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=False)
-    strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=False)
+    strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=True)
+    strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=True)
 
     plt.figure(figsize=(10, 5))
-    plt.plot(strainFM, energiesFM, 'o-', label='FM', c='b')
-    plt.plot(strainAFM, energiesAFM, 's-', label='AFM', c='r')
+    plt.plot(strainFM, energiesFM, 'o-', label='FM (5)', c='b')
+    plt.plot(strainAFM, energiesAFM, 's-', label='AFM (5)', c='r')
+    
     plt.xlabel('Strain Index')
     plt.ylabel('Total Energy (eV)')
     plt.title('Energy Comparison: FM vs AFM')
