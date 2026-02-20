@@ -6,7 +6,7 @@ import numpy as np
 from ase.io.espresso import write_espresso_in, read_espresso_out
 from ase.calculators.singlepoint import SinglePointCalculator
 
-from .config import PSEUDOS
+from .config import INPUT_SCF, PSEUDOS, KPTS
 
 class EspressoHubbard:
     # ---------------------------------------------------------------------------------------------
@@ -215,11 +215,45 @@ if __name__ == "__main__":
     hubbardcalc = EspressoHubbard(phase='AFM')
 
     atoms = CrI3Atom().atoms
-    atoms = hubbardcalc.parse('DataSets/CrI3/VCRELAX/espresso.pwo', atoms)
 
-    energy = atoms.get_potential_energy()
-    moms = atoms.get_magnetic_moments()
-    forces = atoms.get_forces()
+    wkdir = "./DataSets/CrI3/AFM/"
+    dbpath = os.path.join(wkdir, "CrI3_Uniaxial_VC_AFM.db")
 
-    with connect('VCRELAX.db') as db:
-        db.write(atoms, data={'energy': energy, 'moms': moms, 'forces': forces})
+
+    with connect(dbpath) as db:
+        for strain in reversed([-0.0100, -0.0567, -0.1033, -0.1500]):
+            print('---')
+            pwopath = os.path.join(wkdir, f"AFM_strain_uniaxial_x_{strain:.4f}", "espresso.pwo")
+            atoms = hubbardcalc.parse(pwopath, atoms)
+
+            energy = atoms.get_potential_energy()
+            moms = atoms.get_magnetic_moments()
+            forces = atoms.get_forces()
+            stress = atoms.get_stress()
+
+            result = {
+                'strain': strain,
+                'id': f"CrI3_Uniaxial_{strain:.4f}",
+                'status': 'SUCCESS',
+                'energy': energy,
+                'mag_moments': moms,
+                'forces': forces,
+                'stress': stress,
+                'atoms': atoms
+            }
+
+            db.write(
+                result['atoms'],
+                key_value_pairs={
+                    'strain_value': result['strain'],
+                    'dataid': result['id'],
+                    'pipeline_status': result['status']
+                },
+                data={
+                    'mag_moments': result['mag_moments'],
+                    'forces': result['forces'],
+                    'stress': result['stress'],
+                    'scf_parameters': INPUT_SCF,
+                    'kpoints': KPTS
+                }
+            )
