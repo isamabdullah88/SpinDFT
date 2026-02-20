@@ -6,7 +6,7 @@ from concurrent.futures import ProcessPoolExecutor
 from ase.db import connect
 from tqdm import tqdm
 from .strain import prep_strains
-from .config import INPUT_SCF, PHASE, KPTS, VCRELAX
+from .config import INPUT_SCF, PHASE, KPTS, VCRELAX, WKDIR, RELAXED_DIR
 
 def writedb(db, res):
     if res['status'] != 'SUCCESS':
@@ -46,11 +46,11 @@ def multiworker():
     print(f"Total Cores Detected: {TOTAL_CORES}")
     print(f"Running {NWORKERS} concurrent jobs with {CORES_PER_JOB} cores each.")
 
-    wkdir = f"./DataSets/CrI3/AFM"
-    dbpath = os.path.join(wkdir, f"CrI3_Uniaxial_VC_{PHASE}.db")
-    os.makedirs(wkdir, exist_ok=True)
+    # wkdir = f"./DataSets/CrI3/FM-Test"
+    dbpath = os.path.join(WKDIR, f"CrI3_Uniaxial_{PHASE}.db")
+    os.makedirs(WKDIR, exist_ok=True)
 
-    scf = SCF(wkdir, NWORKERS, KPTS, phase=PHASE)
+    scf = SCF(WKDIR, NWORKERS, KPTS, phase=PHASE, relaxed_dir=RELAXED_DIR)
 
     if VCRELAX:
         res = scf.run(None, VCRELAX)
@@ -59,7 +59,7 @@ def multiworker():
         return
     
     # Generate strain tasks
-    tasks = prep_strains(scf.atoms.get_cell(), count = 4, nworkers=NWORKERS)
+    tasks = prep_strains(count = 4)
     
     print(f"Starting Production Run...")
     

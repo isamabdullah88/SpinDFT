@@ -1,1 +1,1 @@
-from .CrI3 import CrI3Atom
+from .CrI3 import CrI3
