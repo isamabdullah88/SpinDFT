@@ -35,7 +35,7 @@ def multiworker():
     if VCRELAX:
         CORES_PER_JOB = 8 # Optimal for small unit cells. 
     else:
-        CORES_PER_JOB = 4 # Optimal for small unit cells.
+        CORES_PER_JOB = 2 # Optimal for small unit cells.
     NWORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
 
     os.environ['OMP_NUM_THREADS'] = str(CORES_PER_JOB)
@@ -46,11 +46,11 @@ def multiworker():
     print(f"Total Cores Detected: {TOTAL_CORES}")
     print(f"Running {NWORKERS} concurrent jobs with {CORES_PER_JOB} cores each.")
 
-    worker_dir = f"./DataSets/CrI3/"
-    dbpath = './DataSets/CrI3_VCRELAX.db'
-    os.makedirs(worker_dir, exist_ok=True)
+    wkdir = f"./DataSets/CrI3/AFM"
+    dbpath = os.path.join(wkdir, f"CrI3_Uniaxial_VC_{PHASE}.db")
+    os.makedirs(wkdir, exist_ok=True)
 
-    scf = SCF(worker_dir, NWORKERS, KPTS, phase=PHASE)
+    scf = SCF(wkdir, NWORKERS, KPTS, phase=PHASE)
 
     if VCRELAX:
         res = scf.run(None, VCRELAX)
@@ -59,7 +59,7 @@ def multiworker():
         return
     
     # Generate strain tasks
-    tasks = prep_strains(scf.atoms.get_cell(), count = 12, nworkers=NWORKERS)
+    tasks = prep_strains(scf.atoms.get_cell(), count = 4, nworkers=NWORKERS)
     
     print(f"Starting Production Run...")
     
