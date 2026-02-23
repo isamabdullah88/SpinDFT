@@ -1,5 +1,6 @@
 import os
 import subprocess
+import copy
 from ase.io.espresso import write_espresso_in
 from .config import PSEUDO_DIR, PSEUDOS
 
@@ -32,13 +33,14 @@ class NSCF:
     def run(self, numcores):
         print(f"[{self.prefix}] Starting Quantum ESPRESSO Pipeline in {self.wkdir}...")
         
-        base_input = self.INPUT_SCF.copy()
-        if 'control' not in base_input: base_input['control'] = {}
-        if 'system' not in base_input: base_input['system'] = {}
+        # CRITICAL FIX: Use deepcopy to prevent mutating the global INPUT_SCF dictionary
+        input_nscf = copy.deepcopy(self.INPUT_SCF)
+        if 'control' not in input_nscf: input_nscf['control'] = {}
+        if 'system' not in input_nscf: input_nscf['system'] = {}
+        if 'electrons' not in input_nscf: input_nscf['electrons'] = {}
         
         # --- STEP 1: NSCF Calculation ---
         print(f"[{self.prefix}] Step 1: Executing NSCF (Explicit K-point Mapping)...")
-        input_nscf = base_input.copy()
         
         # Ensure disk_io='high' so the generated wavefunctions are saved for pw2wannier90
         input_nscf['control'].update({
@@ -50,23 +52,32 @@ class NSCF:
         })
         
         # nosym and noinv MUST be forced here to map the charge density to the full grid
+        # CRITICAL FIX: We calculate 140 bands (Buffer Bands) so the unconverged garbage at the top is ignored by Wannier90
         input_nscf['system'].update({
             'nosym': True,
             'noinv': True,
-            'nbnd': 80 if self.soc else 40
+            'nbnd': 180 if self.soc else 140
+        })
+        
+        # CRITICAL FIX: Force QE to converge empty bands with the exact same strict tolerance as occupied bands
+        input_nscf['electrons'].update({
+            'diago_full_acc': True
         })
         
         nscf_in = os.path.join(self.wkdir, f"{self.prefix}_nscf.pwi")
         with open(nscf_in, 'w') as f:
             write_espresso_in(f, self.atoms, input_data=input_nscf, pseudopotentials=PSEUDOS, kpts=None)
         
-        # Inject explicit K-points
+        # Inject explicit K-points robustly
         with open(nscf_in, 'r') as f:
-            lines = f.readlines()
+            content = f.read()
+            
+        kpts_idx = content.find("K_POINTS")
+        if kpts_idx != -1:
+            content = content[:kpts_idx]
+            
         with open(nscf_in, 'w') as f:
-            for line in lines:
-                if not line.strip().upper().startswith('K_POINTS'):
-                    f.write(line)
+            f.write(content)
             f.write("\n" + self.generate_explicit_kpts() + "\n")
         
         # Run NSCF
