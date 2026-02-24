@@ -35,7 +35,7 @@ def multiworker():
     if VCRELAX:
         CORES_PER_JOB = 8 # Optimal for small unit cells. 
     else:
-        CORES_PER_JOB = 2 # Optimal for small unit cells.
+        CORES_PER_JOB = 6 # Optimal for small unit cells.
     NWORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
 
     os.environ['OMP_NUM_THREADS'] = str(CORES_PER_JOB)
@@ -59,7 +59,7 @@ def multiworker():
         return
     
     # Generate strain tasks
-    tasks = prep_strains(count = 4)
+    tasks = prep_strains(count = 1)
     
     print(f"Starting Production Run...")
     

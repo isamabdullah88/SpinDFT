@@ -30,7 +30,8 @@ def prep_strains(count=100):
     #     tasks.append(task)
         
     # Uniaxial Strain (Stretch X, keep Y and Z fixed)
-    for i, s in enumerate(np.linspace(-0.15, -0.01, nuni)):
+    # for i, s in enumerate(np.linspace(-0.15, -0.01, nuni)):
+    for i, s in enumerate(np.linspace(0.0, 0.0, nuni)):
         # ncell = bcell.copy()
         # ncell[0] *= (1 + s) # Scale only the first lattice vector
         

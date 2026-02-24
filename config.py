@@ -5,7 +5,7 @@ PHASE = 'FM'
 RELAX = False
 VCRELAX = False
 
-WKDIR = f"./DataSets/CrI3/{PHASE}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+WKDIR = f"./DataSets/TB2J/{PHASE}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 RELAXED_DIR = f"./DataSets/CrI3-Relax/{PHASE}/RelaxedAtoms"
 
 INPUT_SCF ={
@@ -15,7 +15,7 @@ INPUT_SCF ={
         "outdir": "./tmp",
         "tprnfor": True,
         "tstress": True,
-        "disk_io": "low",
+        "disk_io": "high",
         'etot_conv_thr': 1.0e-5,
         'forc_conv_thr': 1.0e-4
     },
@@ -26,7 +26,7 @@ INPUT_SCF ={
         "smearing": "mv",
         "degauss": 0.01,
         "nspin": 2,
-        # "nosym": True,
+        "nosym": True,
         "starting_magnetization(1)": 3.0,
         "starting_magnetization(2)": [0.0 if PHASE == 'FM' else -3.0],
         # "tot_magnetization": 0.0,
