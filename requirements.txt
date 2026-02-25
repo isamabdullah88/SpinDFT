@@ -1,0 +1,8 @@
+ase==3.27.0
+matplotlib==3.10.8
+numpy==2.4.2
+pandas==3.0.1
+pillow==12.1.0
+scipy==1.16.3
+TB2J==0.9.12.25
+tqdm==4.67.3
