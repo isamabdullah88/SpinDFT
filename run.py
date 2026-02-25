@@ -74,6 +74,8 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
 
 if __name__ == "__main__":
     import argparse
+    import time
+
     parser = argparse.ArgumentParser(description="Run DFT calculations for strained CrI3.")
     parser.add_argument('--WKDIR', type=str, required=True, help='Working directory for calculations and database.')
     parser.add_argument('--PRERELAXED_DIR', type=str, default=None, help='Directory containing pre-relaxed structures (optional).')
@@ -81,5 +83,9 @@ if __name__ == "__main__":
     parser.add_argument('--N_CALCULATIONS', type=int, default=15, help='Number of strained configurations to compute.')
     parser.add_argument('--CORES_PER_JOB', type=int, default=6, help='Number of cores to use per job.')
     args = parser.parse_args()
+    
+    startt = time.time()
     run(dbpath=args.DBPATH, wkdir=args.WKDIR, prerelaxed_dir=args.PRERELAXED_DIR,
         ncalculations=args.N_CALCULATIONS, coresperjob=args.CORES_PER_JOB)
+    endt = time.time()
+    print(f"Total runtime: {endt - startt:.2f} seconds")
