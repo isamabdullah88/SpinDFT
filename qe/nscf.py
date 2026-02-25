@@ -2,7 +2,7 @@ import os
 import subprocess
 import copy
 from ase.io.espresso import write_espresso_in
-from .config import PSEUDO_DIR, PSEUDOS
+from config import PSEUDO_DIR, PSEUDOS
 
 class QEShellExecutor:
     """Handles the execution of Quantum ESPRESSO shell commands."""

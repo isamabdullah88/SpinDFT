@@ -3,17 +3,19 @@ import numpy as np
 from ase import Atoms
 from ase.io import read
 
+from .config import PHASE
+
 class CrI3:
-    def __init__(self, a=6.913154, c=19.260000, dz=1.618870, relaxed_dir=None):
+    def __init__(self, a=6.913154, c=19.260000, dz=1.618870, prerelaxed_dir=None):
         """
         Initialize the CrI3 class with the pristine lattice parameters.
         
         :param a: In-plane lattice parameter (Angstroms)
         :param c: Out-of-plane lattice parameter (Angstroms)
         :param dz: Physical thickness (distance Cr to I plane) in Angstroms
-        :param relaxed_dir: Path to the directory containing pre-relaxed atom files (optional).
+        :param prerelaxed_dir: Path to the directory containing pre-relaxed atom files (optional).
         """
-        self.relaxed_dir = relaxed_dir
+        self.prerelaxed_dir = prerelaxed_dir
 
         # Fractional offset for the 'c' vector
         z_offset = dz / c 
@@ -56,7 +58,7 @@ class CrI3:
         Returns the Atoms object for a specific strain type and value.
         
         Workflow:
-        1. Checks if a relaxed structure file exists in `relaxed_dir` for this strain.
+        1. Checks if a relaxed structure file exists in `prerelaxed_dir` for this strain.
         2. If YES: Loads and returns it.
         3. If NO: Takes the base_atoms, applies the strain mathematically to the cell, 
            and keeps the fractional coordinates identical.
@@ -66,11 +68,10 @@ class CrI3:
             raise ValueError("stntype must be either 'Biaxial' or 'Uniaxial_X'.")
 
         # 1. Check for the pre-relaxed file
-        if self.relaxed_dir is not None:
+        if self.prerelaxed_dir is not None:
             # File format expects: CrI3_Biaxial_0.020.json
             filename = f"CrI3_{stntype}_{stnvalue:.4f}.json"
-            print('\nfilename: ', filename)
-            filepath = os.path.join(self.relaxed_dir, filename)
+            filepath = os.path.join(self.prerelaxed_dir, PHASE, 'RelaxedAtoms', filename)
             
             if os.path.exists(filepath):
                 print(f"[CrI3] Found relaxed structure. Loading {filename}...")
@@ -108,7 +109,7 @@ class CrI3:
 # ==========================================
 if __name__ == "__main__":
     # Initialize the class, optionally pointing it to a directory with pre-relaxed files
-    cri3_manager = CrI3(relaxed_dir="relaxed_atoms_dir")
+    cri3_manager = CrI3(prerelaxed_dir="relaxed_atoms_dir")
     
     # Write the pristine baseline
     cri3_manager.write_baseline()

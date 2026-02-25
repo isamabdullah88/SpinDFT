@@ -1,7 +1,7 @@
 import numpy as np
 from ase.io import read
 
-def prep_strains(count=100):
+def prep_strains(count=10):
     """
     Generates strained cell matrices and packages them for ProcessPoolExecutor.
     
@@ -30,7 +30,8 @@ def prep_strains(count=100):
     #     tasks.append(task)
         
     # Uniaxial Strain (Stretch X, keep Y and Z fixed)
-    for i, s in enumerate(np.linspace(-0.15, -0.01, nuni)):
+    # for i, s in enumerate(np.linspace(-0.15, -0.01, nuni)):
+    for i, s in enumerate(np.linspace(-0.15, 0.15, nuni)):
         # ncell = bcell.copy()
         # ncell[0] *= (1 + s) # Scale only the first lattice vector
         
@@ -56,21 +57,6 @@ def prep_strains(count=100):
     #     tasks.append(task)
         
     return tasks
-
-# --- Example of how to use this with your class ---
-"""
-def run_simulation(task_tuple):
-    strain_val, ncell, worker_id, label = task_tuple
-    
-    # Inside the worker process:
-    # 1. Instantiate your class
-    # 2. Apply the cell to a COPY of the atoms
-    # my_obj = MyCrystalClass()
-    # local_atoms = my_obj.atoms.copy()
-    # local_atoms.set_cell(ncell, scale_atoms=True)
-    
-    # 3. Run SCF...
-"""
 
 if __name__ == "__main__":
     # Example usage with a dummy cell (a=6.895)

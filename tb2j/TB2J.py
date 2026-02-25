@@ -2,9 +2,9 @@ import os
 import shutil
 from ase.db import connect
 
-from .config import INPUT_SCF, KPTS, PHASE
+from config import INPUT_SCF, KPTS, PHASE
 from .wannier90 import Wannier90
-from .nscf import NSCF
+from qe.nscf import NSCF
 
 class WorkspaceManager:
     """Manages the creation of directories and injection of charge densities."""
@@ -14,8 +14,8 @@ class WorkspaceManager:
 
     def prepare_strain_workspace(self, strain_val):
         """Creates temporary and output directories for a specific strain."""
-        strain_wkdir = os.path.join(self.base_wkdir, f"_strain_uniaxial_x_{strain_val:.4f}", "tmp")
-        strain_outdir = os.path.join(self.base_outdir, f"_strain_uniaxial_x_{strain_val:.4f}")
+        strain_wkdir = os.path.join(self.base_wkdir, f"_Strain_uniaxial_x_{strain_val:.4f}", "tmp")
+        strain_outdir = os.path.join(self.base_outdir, f"_Strain_uniaxial_x_{strain_val:.4f}")
         
         os.makedirs(strain_wkdir, exist_ok=True)
         os.makedirs(strain_outdir, exist_ok=True)

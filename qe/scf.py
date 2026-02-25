@@ -1,30 +1,16 @@
-from .hubbard import EspressoHubbard
-from .CrI3 import CrI3
-from .config import INPUT_SCF
+from config import CrI3, EspressoHubbard, INPUT_SCF
 import os
 import numpy as np
 
 class SCF:
     # ---------------------------------------------------------------------------------------------
-    def __init__(self, wkdir, nworkers, kpts, phase='FM', relaxed_dir=None):
+    def __init__(self, wkdir, kpts, phase='FM', prerelaxed_dir=None):
         self.wkdir = wkdir
-        self.nworkers = nworkers
         self.kpts = kpts
         self.phase = phase
 
-        self.CrI3 = CrI3(relaxed_dir=relaxed_dir)
-
-    # ---------------------------------------------------------------------------------------------
-    # def strainatoms(self, straincell):
-    #     # Apply strain
-    #     atoms = self.atoms.copy()
-
-    #     if straincell is None:
-    #         return atoms
+        self.CrI3 = CrI3(prerelaxed_dir=prerelaxed_dir)
         
-    #     atoms.set_cell(straincell, scale_atoms=True)
-    #     return atoms
-    
     # ---------------------------------------------------------------------------------------------
     def initmags(self, atoms):
         cridxs = [i for i, s in enumerate(atoms.get_chemical_symbols()) if s == 'Cr']
@@ -57,12 +43,10 @@ class SCF:
         else:
             stntype, strain = 'VCRelax', 0.0
             atoms = self.CrI3.strain_atoms(stntype=stntype, stnvalue=strain)
-            
-            
-        # atoms.set_tags([0] * len(atoms))
 
         atoms = self.initmags(atoms)
         
+        print(f"Running SCF for Strain {strain:.4f} ({stntype})")
         wkdir = os.path.join(self.wkdir, f"Strain_{stntype}_{strain:.4f}")
         os.makedirs(wkdir, exist_ok=True)
         espressohub = EspressoHubbard(phase=self.phase)

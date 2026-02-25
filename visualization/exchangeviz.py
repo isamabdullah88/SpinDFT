@@ -119,7 +119,7 @@ def plot_j_vs_distance(xml_path, save_path="exchange_plot.png"):
 
 if __name__ == "__main__":
     # Path to your exchange.xml (Multibinit format)
-    target_xml = "./Datasets/TB2J/Strain_Uniaxial_X_0.0000/tmp/TB2J_results/Multibinit/exchange.xml"
+    target_xml = "./Datasets/CrI3-Relax/FM/_strain_uniaxial_x_-0.0100/tmp/TB2J_results/Multibinit/exchange.xml"
     
     if os.path.exists(target_xml):
         plot_j_vs_distance(target_xml)
