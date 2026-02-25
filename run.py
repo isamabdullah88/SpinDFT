@@ -51,7 +51,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     wkdir = os.path.join(wkdir, PHASE)
     os.makedirs(wkdir, exist_ok=True)
 
-    scf = SCF(wkdir, NWORKERS, KPTS, phase=PHASE, prerelaxed_dir=prerelaxed_dir)
+    scf = SCF(wkdir, KPTS, phase=PHASE, prerelaxed_dir=prerelaxed_dir)
 
     if VCRELAX:
         res = scf.run(None, VCRELAX)
