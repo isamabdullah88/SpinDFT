@@ -1,12 +1,11 @@
-import numpy as np
-from .scf import SCF
 import os
-import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 from ase.db import connect
 from tqdm import tqdm
-from .strain import prep_strains
-from .config import INPUT_SCF, PHASE, KPTS, VCRELAX, WKDIR, RELAXED_DIR
+
+from qe import SCF
+from config import prep_strains
+from config import INPUT_SCF, PHASE, KPTS, VCRELAX, RELAX
 
 def writedb(db, res):
     if res['status'] != 'SUCCESS':
@@ -29,37 +28,39 @@ def writedb(db, res):
         }
     )
 
-def multiworker():
+def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     TOTAL_CORES = os.cpu_count() - 2
 
     if VCRELAX:
-        CORES_PER_JOB = 8 # Optimal for small unit cells. 
+        CORES_PER_JOB = TOTAL_CORES # Optimal for small unit cells. 
     else:
-        CORES_PER_JOB = 6 # Optimal for small unit cells.
+        CORES_PER_JOB = coresperjob # Optimal for small unit cells.
     NWORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
 
     os.environ['OMP_NUM_THREADS'] = str(CORES_PER_JOB)
-    # os.environ['MKL_NUM_THREADS'] = '1'
-    # os.environ['VECLIB_MAXIMUM_THREADS'] = '1'
     
     print(f"--- Resource Optimization ---")
     print(f"Total Cores Detected: {TOTAL_CORES}")
     print(f"Running {NWORKERS} concurrent jobs with {CORES_PER_JOB} cores each.")
+    print("-----------------------------")
+    print(f"Using K-Points: {KPTS}")
+    print(f"Phase: {PHASE}")
+    print(f"VC-Relax Enabled: {VCRELAX}")
+    print(f"Relaxation: {RELAX}")
 
-    # wkdir = f"./DataSets/CrI3/FM-Test"
-    dbpath = os.path.join(WKDIR, f"CrI3_Uniaxial_{PHASE}.db")
-    os.makedirs(WKDIR, exist_ok=True)
+    wkdir = os.path.join(wkdir, PHASE)
+    os.makedirs(wkdir, exist_ok=True)
 
-    scf = SCF(WKDIR, NWORKERS, KPTS, phase=PHASE, relaxed_dir=RELAXED_DIR)
+    scf = SCF(wkdir, NWORKERS, KPTS, phase=PHASE, prerelaxed_dir=prerelaxed_dir)
 
     if VCRELAX:
         res = scf.run(None, VCRELAX)
-        print(f"VC-Relax Test Run: {res['status']}")
+        print(f"VC-Relax Run: {res['status']}")
         writedb(connect(dbpath), res)
         return
     
     # Generate strain tasks
-    tasks = prep_strains(count = 1)
+    tasks = prep_strains(count = ncalculations)
     
     print(f"Starting Production Run...")
     
@@ -72,4 +73,13 @@ def multiworker():
             
 
 if __name__ == "__main__":
-    multiworker()
+    import argparse
+    parser = argparse.ArgumentParser(description="Run DFT calculations for strained CrI3.")
+    parser.add_argument('--WKDIR', type=str, required=True, help='Working directory for calculations and database.')
+    parser.add_argument('--PRERELAXED_DIR', type=str, default=None, help='Directory containing pre-relaxed structures (optional).')
+    parser.add_argument('--DBPATH', type=str, required=True, help='Path to the SQLite database file.')
+    parser.add_argument('--N_CALCULATIONS', type=int, default=15, help='Number of strained configurations to compute.')
+    parser.add_argument('--CORES_PER_JOB', type=int, default=6, help='Number of cores to use per job.')
+    args = parser.parse_args()
+    run(dbpath=args.DBPATH, wkdir=args.WKDIR, prerelaxed_dir=args.PRERELAXED_DIR,
+        ncalculations=args.N_CALCULATIONS, coresperjob=args.CORES_PER_JOB)
