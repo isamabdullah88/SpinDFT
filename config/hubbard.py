@@ -1,7 +1,7 @@
 import subprocess
+import platform
 import os
 import re
-import io
 import numpy as np
 from ase.io.espresso import write_espresso_in, read_espresso_out
 from ase.calculators.singlepoint import SinglePointCalculator
@@ -10,8 +10,9 @@ from .config import INPUT_SCF, PSEUDOS, KPTS
 
 class EspressoHubbard:
     # ---------------------------------------------------------------------------------------------
-    def __init__(self, phase='FM'):
+    def __init__(self, phase='FM', cores_per_job=6):
         self.phase = phase
+        self.cores_per_job = cores_per_job
 
 
     def parseatoms(self, content, atoms):
@@ -193,8 +194,11 @@ class EspressoHubbard:
             else:
                 f.write("\nHUBBARD (atomic)\nU Cr-3d 3.0\n\n")
             
-        # Command to Run QE
-        cmd = f"mpirun -np 1 pw.x -in {inname} > {outname}"
+        
+        if platform.system() == "Darwin":
+            cmd = f"mpirun -np {self.cores_per_job} pw.x -in {inname} > {outname}"
+        else:
+            cmd = f"mpirun --bind-to core -np {self.cores_per_job} pw.x -in {inname} > {outname}"
         
         try:
             subprocess.run(cmd, shell=True, cwd=directory, check=True)

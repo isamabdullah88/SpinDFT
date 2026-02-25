@@ -4,10 +4,11 @@ import numpy as np
 
 class SCF:
     # ---------------------------------------------------------------------------------------------
-    def __init__(self, wkdir, kpts, phase='FM', prerelaxed_dir=None):
+    def __init__(self, wkdir, kpts, phase='FM', prerelaxed_dir=None, cores_per_job=1):
         self.wkdir = wkdir
         self.kpts = kpts
         self.phase = phase
+        self.cores_per_job = cores_per_job
 
         self.CrI3 = CrI3(prerelaxed_dir=prerelaxed_dir)
         
@@ -49,7 +50,9 @@ class SCF:
         print(f"Running SCF for Strain {strain:.4f} ({stntype})")
         wkdir = os.path.join(self.wkdir, f"Strain_{stntype}_{strain:.4f}")
         os.makedirs(wkdir, exist_ok=True)
-        espressohub = EspressoHubbard(phase=self.phase)
+        
+        espressohub = EspressoHubbard(phase=self.phase, cores_per_job=self.cores_per_job)
+
         atomsout = espressohub.runQE(
             atoms, 
             INPUT_SCF, 

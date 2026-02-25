@@ -37,7 +37,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         CORES_PER_JOB = coresperjob # Optimal for small unit cells.
     NWORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
 
-    os.environ['OMP_NUM_THREADS'] = str(CORES_PER_JOB)
+    os.environ['OMP_NUM_THREADS'] = '1'
     
     print(f"--- Resource Optimization ---")
     print(f"Total Cores Detected: {TOTAL_CORES}")
@@ -51,7 +51,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     wkdir = os.path.join(wkdir, PHASE)
     os.makedirs(wkdir, exist_ok=True)
 
-    scf = SCF(wkdir, KPTS, phase=PHASE, prerelaxed_dir=prerelaxed_dir)
+    scf = SCF(wkdir, KPTS, phase=PHASE, prerelaxed_dir=prerelaxed_dir, cores_per_job=CORES_PER_JOB)
 
     if VCRELAX:
         res = scf.run(None, VCRELAX)
