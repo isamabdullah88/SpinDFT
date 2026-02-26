@@ -65,10 +65,11 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     print(f"Starting Production Run...")
     
 
-    with connect(dbpath) as db, ProcessPoolExecutor(max_workers=NWORKERS) as executor:
-        for res in tqdm(executor.map(scf.run, tasks), total=len(tasks)):
-            tqdm.write(f"Strain {res['strain']:.4f}: {res['status']}")
-            
+    with connect(dbpath) as db:
+        for task in tasks:
+            strain, stntype = task
+            res = scf.run((strain, stntype))
+            print(f"Strain {strain:.4f} ({stntype}): {res['status']}")
             writedb(db, res)
             
 
