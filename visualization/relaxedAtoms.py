@@ -2,7 +2,7 @@ import os
 import ase.db
 from ase.io import write
 
-def persist_relaxed(dbpath, stype='Uniaxial', outdir="RelaxedAtoms"):
+def persist_relaxed(dbpath, stype='Uniaxial_X', outdir="RelaxedAtoms"):
     """
     Reads an ASE database and extracts the atomic structures into individual files.
     Assumes each row in the database has a 'strain' key-value pair.
@@ -32,7 +32,7 @@ def persist_relaxed(dbpath, stype='Uniaxial', outdir="RelaxedAtoms"):
             # We use .json extension because ASE natively supports it. 
             # It perfectly preserves fractional coords, cell dimensions, and pbc.
             # Formatting to 3 decimal places (e.g., strain_0.020.json) to avoid float rounding errors in filenames.
-            filename = f"Strain_{stype}_X_{strain:.4f}.json"
+            filename = f"Strain_{stype}_{strain:.4f}.json"
             filepath = os.path.join(outdir, filename)
             
             # Write the atoms object to the file
