@@ -71,7 +71,7 @@ class CrI3:
         if self.prerelaxed_dir is not None:
             # File format expects: CrI3_Biaxial_0.020.json
             filename = f"Strain_{stntype}_{stnvalue:.4f}.json"
-            filepath = os.path.join(self.prerelaxed_dir, PHASE, 'RelaxedAtoms', filename)
+            filepath = os.path.join(self.prerelaxed_dir, PHASE, filename)
             
             if os.path.exists(filepath):
                 print(f"[CrI3] Found relaxed structure. Loading {filename}...")
