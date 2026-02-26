@@ -14,7 +14,6 @@
 echo "Starting job on $HOSTNAME"
 module purge
 module load qe75
-module load gcc openmpi mkl
 
 # --- 2. Load Your Custom Python Environment ---
 # (Fallback to home directory paths as discussed during the /scratch debugging)
