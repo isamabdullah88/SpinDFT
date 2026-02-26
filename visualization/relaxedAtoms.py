@@ -32,7 +32,7 @@ def persist_relaxed(dbpath, stype='Uniaxial', outdir="RelaxedAtoms"):
             # We use .json extension because ASE natively supports it. 
             # It perfectly preserves fractional coords, cell dimensions, and pbc.
             # Formatting to 3 decimal places (e.g., strain_0.020.json) to avoid float rounding errors in filenames.
-            filename = f"CrI3_{stype}_{strain:.4f}.json"
+            filename = f"Strain_{stype}_X_{strain:.4f}.json"
             filepath = os.path.join(outdir, filename)
             
             # Write the atoms object to the file
@@ -45,6 +45,10 @@ def persist_relaxed(dbpath, stype='Uniaxial', outdir="RelaxedAtoms"):
     print(f"\nExtraction complete. {extracted_count} structures saved to '{outdir}/'.")
 
 if __name__ == "__main__":
-    dbpath = './DataSets/CrI3/AFM/CrI3_Uniaxial_VC_AFM.db'
-    outdir = './DataSets/CrI3/AFM/RelaxedAtoms'
-    persist_relaxed(dbpath, stype='Uniaxial_X', outdir=outdir)
+    import argparse
+    parser = argparse.ArgumentParser(description="Extract relaxed atomic structures from an ASE database.")
+    parser.add_argument('--dbpath', type=str, required=True, help='Path to the ASE database file.')
+    parser.add_argument('--stype', type=str, default='Uniaxial_X', help='Strain type to include in filenames (default: Uniaxial_X).')
+    parser.add_argument('--outdir', type=str, default='RelaxedAtoms', help='Output directory to save the extracted structures (default: RelaxedAtoms).')
+    args = parser.parse_args()
+    persist_relaxed(args.dbpath, stype=args.stype, outdir=args.outdir)

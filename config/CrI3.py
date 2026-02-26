@@ -70,7 +70,7 @@ class CrI3:
         # 1. Check for the pre-relaxed file
         if self.prerelaxed_dir is not None:
             # File format expects: CrI3_Biaxial_0.020.json
-            filename = f"CrI3_{stntype}_{stnvalue:.4f}.json"
+            filename = f"Strain_{stntype}_{stnvalue:.4f}.json"
             filepath = os.path.join(self.prerelaxed_dir, PHASE, 'RelaxedAtoms', filename)
             
             if os.path.exists(filepath):
