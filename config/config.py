@@ -3,6 +3,10 @@ import os
 PHASE = 'FM'
 RELAX = False
 VCRELAX = False
+SOC = False
+
+NSCF_NBNDS = 100
+WANNIER_NBNDS = 100
 
 INPUT_SCF ={
     "control": {
@@ -36,7 +40,7 @@ INPUT_SCF ={
     }
 }
 
-KPTS = (8, 8, 1)
+KPTS = (10, 10, 1)
 
 if RELAX:
     INPUT_SCF["control"]["calculation"] = "relax"
