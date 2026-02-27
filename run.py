@@ -1,4 +1,5 @@
 import os
+import time
 from ase.db import connect
 from tqdm import tqdm
 
@@ -77,6 +78,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
             strain_wkdir, strain_outdir = workspace.prepare_strain_workspace(strain)
             workspace.inject_scf_density(None, strain_wkdir)
 
+            startt = time.time()
             print(f"Running Exchange Pipeline for Strain {strain:.4f} ({stntype})...")
             exchange = Exchange(
                 atoms=res['atoms'],
@@ -91,11 +93,11 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
             )
             exchange.run()
 
-            print(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype})")
+            endt = time.time()
+            print(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
 
 if __name__ == "__main__":
     import argparse
-    import time
 
     parser = argparse.ArgumentParser(description="Run DFT calculations for strained CrI3.")
     parser.add_argument('--WKDIR', type=str, required=True, help='Working directory for calculations and database.')
