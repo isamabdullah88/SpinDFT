@@ -72,7 +72,8 @@ class NSCFInputBuilder:
         
         # Force QE to converge empty bands with the exact same strict tolerance as occupied bands
         input_nscf['electrons'].update({
-            'diago_full_acc': True
+            'diago_full_acc': True,
+            'diagonalization': 'cg'
         })
         
         nscf_in = os.path.join(self.wkdir, f"{self.prefix}_nscf.pwi")
