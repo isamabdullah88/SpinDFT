@@ -20,11 +20,11 @@ INPUT_SCF ={
         'forc_conv_thr': 1.0e-4
     },
     "system": {
-        "ecutwfc": 40,
-        "ecutrho": 320,
+        "ecutwfc": 60,
+        "ecutrho": 600,
         "occupations": "smearing",
-        "smearing": "mv",
-        "degauss": 0.01,
+        "smearing": "gaussian",
+        "degauss": 0.002,
         "nspin": 2,
         "nosym": True,
         "starting_magnetization(1)": 3.0,
@@ -33,8 +33,8 @@ INPUT_SCF ={
     },
     "electrons": {
         # "mixing_beta": 0.1, 
-        "conv_thr": 1.0e-5,
-        "diagonalization": "cg",
+        "conv_thr": 1.0e-9,
+        "diagonalization": "david",
         # "electron_maxstep": 10,
         "mixing_mode": "local-TF"
     }
