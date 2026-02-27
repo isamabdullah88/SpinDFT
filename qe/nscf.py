@@ -79,17 +79,42 @@ class NSCFInputBuilder:
         with open(nscf_in, 'w') as f:
             write_espresso_in(f, self.atoms, input_data=input_nscf, pseudopotentials=PSEUDOS, kpts=None)
         
-        # Inject explicit K-points robustly
+        # ------------------------------------------------------------------
+        # CRITICAL FIX: Robustly inject positions, k-points, and cell params
+        # ------------------------------------------------------------------
         with open(nscf_in, 'r') as f:
             content = f.read()
             
-        kpts_idx = content.find("K_POINTS")
-        if kpts_idx != -1:
-            content = content[:kpts_idx]
+        # ASE writes ATOMIC_POSITIONS, K_POINTS, and CELL_PARAMETERS at the end.
+        # We find the earliest occurrence of any of these to slice the file cleanly
+        # without deleting necessary data unexpectedly.
+        cut_idx = len(content)
+        for keyword in ["ATOMIC_POSITIONS", "K_POINTS", "CELL_PARAMETERS"]:
+            idx = content.find(keyword)
+            if idx != -1 and idx < cut_idx:
+                cut_idx = idx
+                
+        content = content[:cut_idx]
             
         with open(nscf_in, 'w') as f:
+            # Write everything up to the cutoff (Namely: &CONTROL, &SYSTEM, &ELECTRONS, ATOMIC_SPECIES)
             f.write(content)
-            f.write("\n" + self.generate_explicit_kpts() + "\n")
+            
+            # 1. Inject ATOMIC_POSITIONS explicitly
+            f.write("ATOMIC_POSITIONS angstrom\n")
+            for atom in self.atoms:
+                f.write(f"  {atom.symbol:3s}  {atom.position[0]:.8f}  {atom.position[1]:.8f}  {atom.position[2]:.8f}\n")
+            f.write("\n")
+            
+            # 2. Inject explicit K_POINTS
+            f.write(self.generate_explicit_kpts())
+            f.write("\n")
+            
+            # 3. Inject CELL_PARAMETERS explicitly to fix ibrav=0 crash
+            f.write("CELL_PARAMETERS angstrom\n")
+            for vec in self.atoms.cell:
+                f.write(f"  {vec[0]:.8f}  {vec[1]:.8f}  {vec[2]:.8f}\n")
+            f.write("\n")
 
 
 class NSCF:

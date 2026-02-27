@@ -1,10 +1,11 @@
 import os
 import shutil
+import glob
 from ase.db import connect
 
 from config import INPUT_SCF, KPTS, PHASE
 from .wannier90 import Wannier90
-from qe.nscf import NSCF
+from qe import NSCF
 
 class WorkspaceManager:
     """Manages the creation of directories and injection of charge densities."""
@@ -14,8 +15,8 @@ class WorkspaceManager:
 
     def prepare_strain_workspace(self, strain_val):
         """Creates temporary and output directories for a specific strain."""
-        strain_wkdir = os.path.join(self.base_wkdir, f"_Strain_uniaxial_x_{strain_val:.4f}", "tmp")
-        strain_outdir = os.path.join(self.base_outdir, f"_Strain_uniaxial_x_{strain_val:.4f}")
+        strain_wkdir = os.path.join(self.base_wkdir, f"Strain_Uniaxial_X_{strain_val:.4f}", "tmp")
+        strain_outdir = os.path.join(self.base_outdir, f"Strain_Uniaxial_X_{strain_val:.4f}")
         
         os.makedirs(strain_wkdir, exist_ok=True)
         os.makedirs(strain_outdir, exist_ok=True)
@@ -37,7 +38,7 @@ class WorkspaceManager:
         return True
 
 
-class StrainPipeline:
+class Exchange:
     """Executes the NSCF and Wannier/TB2J steps for a single configuration."""
     def __init__(self, atoms, strain_val, wkdir, outdir, kpts, soc, numcores, nscf_nbnds, wannier_nbnds):
         self.atoms = atoms
@@ -50,13 +51,39 @@ class StrainPipeline:
         self.nscf_nbnds = nscf_nbnds
         self.wannier_nbnds = wannier_nbnds
 
+    def cleanup_heavy_files(self):
+        """Surgically removes massive intermediate files to save HPC quota."""
+        print("\n--- Initiating HPC Quota Cleanup ---")
+        
+        # 1. Delete the Quantum ESPRESSO wavefunctions/charge density
+        qe_save_dir = os.path.join(self.wkdir, "pwscf.save")
+        if os.path.exists(qe_save_dir):
+            shutil.rmtree(qe_save_dir)
+            print(f"[Deleted] QE Save Directory: {qe_save_dir}")
+            
+        # 2. Delete Wannier90/TB2J heavy matrices
+        heavy_extensions = ['*.mmn', '*.amn', '*.chk', '*.eig', '*.nnkp', '*wfc*']
+        deleted_count = 0
+        
+        for ext in heavy_extensions:
+            # Search for the heavy files in the working directory
+            for filepath in glob.glob(os.path.join(self.wkdir, ext)):
+                try:
+                    os.remove(filepath)
+                    deleted_count += 1
+                except OSError as e:
+                    print(f"Warning: Could not delete {filepath} - {e}")
+                    
+        print(f"[Deleted] {deleted_count} heavy Wannier90/QE matrix files.")
+        print("--- Cleanup Complete: Kept lightweight logs and TB2J results ---\n")
+
     def run(self):
         print(f"\n{'='*50}")
         print(f"Executing Pipeline for Strain: {self.strain_val:.4f}")
         print(f"{'='*50}")
         
         # Step 1: Explicit NSCF Calculation (using buffer bands)
-        qe_runner = NSCF(
+        nscf = NSCF(
             atoms=self.atoms, 
             INPUT_SCF=INPUT_SCF, 
             wkdir=self.wkdir, 
@@ -64,10 +91,10 @@ class StrainPipeline:
             soc=self.soc, 
             nbnds=self.nscf_nbnds
         )
-        qe_runner.run(self.numcores)
+        nscf.run(self.numcores)
 
         # Step 2: Wannier90 & TB2J (using perfectly matched subset of bands)
-        wannier_runner = Wannier90(
+        wannier = Wannier90(
             INPUT_SCF=INPUT_SCF, 
             wkdir=self.wkdir, 
             outdir=self.outdir, 
@@ -75,12 +102,19 @@ class StrainPipeline:
             soc=self.soc, 
             nbnds=self.wannier_nbnds
         )
-        result = wannier_runner.run(self.atoms, self.numcores)
+        result = wannier.run(self.atoms, self.numcores)
         
+        # Step 3: Conditional Cleanup
+        # If the Wannier/TB2J run returns a SUCCESS status, delete the junk.
+        if isinstance(result, dict) and result.get('status') == 'SUCCESS':
+            self.cleanup_heavy_files()
+        else:
+            print("\nWARNING: Pipeline step failed. Retaining heavy files for debugging purposes!")
+            
         return result
 
 
-class TB2JMaster:
+class TB2J:
     """Master controller that connects to the database and dispatches jobs."""
     def __init__(self, dbpath, wkdir, outdir, kpts=(2, 2, 1), soc=False, numcores=8):
         self.dbpath = dbpath
@@ -100,7 +134,7 @@ class TB2JMaster:
         print(f"Band Configuration: NSCF={self.nscf_nbnds}, Wannier={self.wannier_nbnds}")
         
         with connect(self.dbpath) as db:
-            # Iterate through all database rows (Restored from the hardcoded `row = db.get(4)`)
+            # Iterate through all database rows
             for row in db.select():
                 atoms = db.get_atoms(row.id)
                 strain_val = row.get('strain_value', 0.0) 
@@ -111,12 +145,11 @@ class TB2JMaster:
                 print(f"Output Dir:  {strain_outdir}")
                 
                 # Inject precomputed SCF density
-                # Note: You can dynamically format this string if your save folders have strain values in their name!
                 scf_source = scf_save_dir_template
                 self.workspace.inject_scf_density(scf_source, strain_wkdir)
 
                 # Execute pipeline
-                pipeline = StrainPipeline(
+                pipeline = Exchange(
                     atoms=atoms,
                     strain_val=strain_val,
                     wkdir=strain_wkdir,
@@ -143,7 +176,7 @@ if __name__ == "__main__":
     NUMCORES = 8
     
     # Initialize and run master
-    master = TB2JMaster(
+    pipeline = TB2J(
         dbpath=dbpath, 
         wkdir=wkdir, 
         outdir=outdir, 
@@ -152,4 +185,4 @@ if __name__ == "__main__":
         numcores=NUMCORES
     )
     
-    master.run_all(scf_save_dir_template=precomputed_scf_path)
+    pipeline.run_all(scf_save_dir_template=precomputed_scf_path)

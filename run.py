@@ -1,11 +1,11 @@
 import os
-from concurrent.futures import ProcessPoolExecutor
 from ase.db import connect
 from tqdm import tqdm
 
 from qe import SCF
 from config import prep_strains
-from config import INPUT_SCF, PHASE, KPTS, VCRELAX, RELAX
+from config import INPUT_SCF, PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, WANNIER_NBNDS
+from tb2j import Exchange, WorkspaceManager
 
 def writedb(db, res):
     if res['status'] != 'SUCCESS':
@@ -59,19 +59,39 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         writedb(connect(dbpath), res)
         return
     
+    workspace = WorkspaceManager(wkdir, wkdir)
+
     # Generate strain tasks
     tasks = prep_strains(count = ncalculations)
     
     print(f"Starting Production Run...")
     
-
     with connect(dbpath) as db:
         for task in tasks:
             strain, stntype = task
+
             res = scf.run((strain, stntype))
             print(f"Strain {strain:.4f} ({stntype}): {res['status']}")
             writedb(db, res)
-            
+
+            strain_wkdir, strain_outdir = workspace.prepare_strain_workspace(strain)
+            workspace.inject_scf_density(None, strain_wkdir)
+
+            print(f"Running Exchange Pipeline for Strain {strain:.4f} ({stntype})...")
+            exchange = Exchange(
+                atoms=res['atoms'],
+                strain_val=strain,
+                wkdir=strain_wkdir,
+                outdir=strain_outdir,
+                kpts=KPTS,
+                soc=SOC,
+                numcores=CORES_PER_JOB,
+                nscf_nbnds=NSCF_NBNDS,
+                wannier_nbnds=WANNIER_NBNDS
+            )
+            exchange.run()
+
+            print(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype})")
 
 if __name__ == "__main__":
     import argparse
