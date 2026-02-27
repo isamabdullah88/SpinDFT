@@ -5,10 +5,14 @@ import sys
 import re
 
 class ShellExecutor:
-    """Handles the execution of shell commands, environment injection, and MPI parsing."""
+    """Handles the execution of shell commands, environment injection, and MPI parsing.
+       Silently logs all standard output to a file instead of dumping to the console.
+    """
     def __init__(self, wkdir, prefix):
         self.wkdir = wkdir
         self.prefix = prefix
+        # Define the log file path where all outputs will be quietly stored
+        self.log_file = os.path.join(self.wkdir, f"{self.prefix}_execution.log")
 
     def runcmd(self, command, serial=False, env=None):
         if serial and "mpirun" in command:
@@ -17,7 +21,7 @@ class ShellExecutor:
             if executable:
                 command = " ".join(parts[parts.index(executable):])
         
-        print(f"[{self.prefix}] Executing: {command}")
+        print(f"[{self.prefix}] Executing: {command} (Output redirected to log)")
         
         run_env = os.environ.copy()
         if env: 
@@ -29,13 +33,34 @@ class ShellExecutor:
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True, check=True, env=run_env
             )
-            if result.stdout.strip():
-                print(result.stdout.strip())
+            
+            # --- THE FIX: Append the output to a log file instead of printing ---
+            with open(self.log_file, 'a') as log:
+                log.write(f"{'='*50}\n")
+                log.write(f"COMMAND: {command}\n")
+                log.write(f"{'='*50}\n")
+                if result.stdout.strip():
+                    log.write(result.stdout.strip() + "\n")
+                if result.stderr.strip():
+                    log.write("--- STDERR / WARNINGS ---\n")
+                    log.write(result.stderr.strip() + "\n")
+                log.write("\n")
+                
             return result.stdout
+            
         except subprocess.CalledProcessError as e:
             print(f"[{self.prefix}] ERROR in command: {command}")
-            print(f"[{self.prefix}] Details: {e.stderr.strip()}")
-            raise RuntimeError(f"Command failed with code {e.returncode}")
+            print(f"[{self.prefix}] Check the log file for full details: {self.log_file}")
+            
+            # Log the crash details before killing the script
+            with open(self.log_file, 'a') as log:
+                log.write(f"{'!'*50}\n")
+                log.write(f"CRASH IN COMMAND: {command}\n")
+                log.write(f"EXIT CODE: {e.returncode}\n")
+                log.write(f"STDERR:\n{e.stderr.strip()}\n")
+                log.write(f"{'!'*50}\n\n")
+                
+            raise RuntimeError(f"Command failed with code {e.returncode}. See log for details.")
 
 
 class WannierFileManager:
