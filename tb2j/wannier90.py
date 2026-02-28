@@ -223,7 +223,7 @@ class Wannier90:
     Coordinates the file manager, executor, parser, and TB2J runner.
     """
     def __init__(self, wkdir, kmesh=(2, 2, 1), soc=False, nbnds=None):
-        self.wkdir = os.path.abspath(wkdir)
+        self.wkdir = wkdir
         self.prefix = 'pwscf'
         self.kmesh = kmesh
         self.soc = soc
