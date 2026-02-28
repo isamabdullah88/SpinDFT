@@ -50,7 +50,8 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     print(f"Relaxation: {RELAX}")
 
     wkdir = os.path.join(wkdir, PHASE)
-    os.makedirs(wkdir, exist_ok=True)
+
+    workspace = WorkspaceManager(wkdir)
 
     scf = SCF(wkdir, KPTS, phase=PHASE, prerelaxed_dir=prerelaxed_dir, cores_per_job=CORES_PER_JOB)
 
@@ -60,7 +61,6 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         writedb(connect(dbpath), res)
         return
     
-    workspace = WorkspaceManager(wkdir, wkdir)
 
     # Generate strain tasks
     tasks = prep_strains(count = ncalculations)
@@ -71,27 +71,27 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         for task in tasks:
             strain, stntype = task
 
+            workspace.setwkdir(strain)
+
+
+            startt = time.time()
             res = scf.run((strain, stntype))
             print(f"Strain {strain:.4f} ({stntype}): {res['status']}")
             writedb(db, res)
 
-            strain_wkdir, strain_outdir = workspace.prepare_strain_workspace(strain)
-            workspace.inject_scf_density(None, strain_wkdir)
+            workspace.cleanscf()
 
-            startt = time.time()
-            print(f"Running Exchange Pipeline for Strain {strain:.4f} ({stntype})...")
-            exchange = Exchange(
-                atoms=res['atoms'],
-                strain_val=strain,
-                wkdir=strain_wkdir,
-                outdir=strain_outdir,
-                kpts=KPTS,
-                soc=SOC,
+            # print(f"Running Exchange Pipeline for Strain {strain:.4f} ({stntype})...")
+            exchangepl = Exchange(
+                kpts=KPTS, 
+                soc=False, 
                 numcores=CORES_PER_JOB,
                 nscf_nbnds=NSCF_NBNDS,
                 wannier_nbnds=WANNIER_NBNDS
             )
-            exchange.run()
+            exchangepl.run(res['atoms'], workspace.tmpdir)
+
+            workspace.cleanwannier()
 
             endt = time.time()
             print(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")

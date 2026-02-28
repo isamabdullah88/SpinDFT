@@ -182,9 +182,9 @@ class QEOutputParser:
 
 class TB2JExchange:
     """Configures and runs the TB2J exchange calculation."""
-    def __init__(self, wkdir, outdir, prefix, kmesh, soc, executor):
+    def __init__(self, wkdir, prefix, kmesh, soc, executor):
         self.wkdir = wkdir
-        self.outdir = outdir
+        # self.outdir = outdir
         self.prefix = prefix
         self.kmesh = kmesh
         self.soc = soc
@@ -206,14 +206,14 @@ class TB2JExchange:
             
         self.executor.runcmd(cmd)
         
-        outxml = os.path.join(self.wkdir, 'TB2J_results', 'Multibinit', 'exchange.xml')
-        if os.path.exists(outxml):
-            final_path = os.path.join(self.outdir, f"exchange_{self.prefix}.xml")
-            shutil.copy(outxml, final_path)
-            print(f"[{self.prefix}] Pipeline complete! Result saved to {final_path}")
-            return {'status': 'SUCCESS', 'file': final_path}
+        outpath = os.path.join(self.wkdir, 'TB2J_results', 'Multibinit', 'exchange.xml')
+        if os.path.exists(outpath):
+            # final_path = os.path.join(self.outdir, f"exchange_{self.prefix}.xml")
+            # shutil.copy(outpath, final_path)
+            print(f"[{self.prefix}] Pipeline complete! Result saved to {outpath}")
+            return {'status': 'SUCCESS', 'file': outpath}
         else:
-            print(f"[{self.prefix}] Pipeline failed: exchange.xml not found at {outxml}")
+            print(f"[{self.prefix}] Pipeline failed: exchange.xml not found at {outpath}")
             return {'status': 'TB2J_FAIL'}
 
 
@@ -222,9 +222,8 @@ class Wannier90:
     Main orchestrator for the Wannier90 to TB2J pipeline.
     Coordinates the file manager, executor, parser, and TB2J runner.
     """
-    def __init__(self, INPUT_SCF, wkdir, outdir, kmesh=(2, 2, 1), soc=False, nbnds=None):
-        self.wkdir = os.path.abspath(wkdir)
-        self.outdir = os.path.abspath(outdir)
+    def __init__(self, wkdir, kmesh=(2, 2, 1), soc=False, nbnds=None):
+        self.wkdir = wkdir
         self.prefix = 'pwscf'
         self.kmesh = kmesh
         self.soc = soc
@@ -234,7 +233,7 @@ class Wannier90:
         self.executor = ShellExecutor(self.wkdir, self.prefix)
         self.file_manager = WannierFileManager(self.wkdir, self.prefix, self.kmesh, self.soc, self.nbnds)
         self.qe_parser = QEOutputParser(self.wkdir, self.prefix)
-        self.tb2j = TB2JExchange(self.wkdir, self.outdir, self.prefix, self.kmesh, self.soc, self.executor)
+        self.tb2j = TB2JExchange(self.wkdir, self.prefix, self.kmesh, self.soc, self.executor)
 
     def run(self, atoms, numcores):
         seednames, spins = ([self.prefix], ['none']) if self.soc else ([f"{self.prefix}_up", f"{self.prefix}_down"], ['up', 'down'])
