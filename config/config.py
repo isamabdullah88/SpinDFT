@@ -40,7 +40,7 @@ INPUT_SCF ={
     }
 }
 
-KPTS = (10, 10, 1)
+KPTS = (8, 8, 1)
 
 if RELAX:
     INPUT_SCF["control"]["calculation"] = "relax"
