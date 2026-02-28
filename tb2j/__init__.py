@@ -1,1 +1,1 @@
-from .tb2j import WorkspaceManager, TB2J, Exchange
+from .exchange import WorkspaceManager, TB2J, Exchange
