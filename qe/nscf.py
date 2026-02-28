@@ -11,7 +11,7 @@ class QEShellExecutor:
         self.prefix = prefix
 
     def run_pw(self, numcores):
-        cmd = f"mpirun -np {numcores} pw.x -npool 4 < {self.prefix}_nscf.pwi > {self.prefix}_nscf.pwo"
+        cmd = f"mpirun -np {numcores} pw.x -npool 4 < {self.prefix}.pwi > {self.prefix}.pwo"
         print(f"[{self.prefix}] Executing: {cmd}")
         
         try:
@@ -76,14 +76,14 @@ class NSCFInputBuilder:
             'diagonalization': 'cg'
         })
         
-        nscf_in = os.path.join(self.wkdir, f"{self.prefix}_nscf.pwi")
-        with open(nscf_in, 'w') as f:
+        nscfin = os.path.join(self.wkdir, "nscf.pwi")
+        with open(nscfin, 'w') as f:
             write_espresso_in(f, self.atoms, input_data=input_nscf, pseudopotentials=PSEUDOS, kpts=None)
         
         # ------------------------------------------------------------------
         # CRITICAL FIX: Robustly inject positions, k-points, and cell params
         # ------------------------------------------------------------------
-        with open(nscf_in, 'r') as f:
+        with open(nscfin, 'r') as f:
             content = f.read()
             
         # ASE writes ATOMIC_POSITIONS, K_POINTS, and CELL_PARAMETERS at the end.
@@ -97,7 +97,7 @@ class NSCFInputBuilder:
                 
         content = content[:cut_idx]
             
-        with open(nscf_in, 'w') as f:
+        with open(nscfin, 'w') as f:
             # Write everything up to the cutoff (Namely: &CONTROL, &SYSTEM, &ELECTRONS, ATOMIC_SPECIES)
             f.write(content)
             
@@ -134,12 +134,12 @@ class NSCF:
             atoms=self.atoms, 
             INPUT_SCF=INPUT_SCF, 
             wkdir=self.wkdir, 
-            prefix=self.prefix, 
+            prefix=self.prefix,
             kmesh=kmesh, 
             soc=soc, 
             nbnds=nbnds
         )
-        self.executor = QEShellExecutor(self.wkdir, self.prefix)
+        self.executor = QEShellExecutor(self.wkdir, 'nscf')
 
     def run(self, numcores):
         print(f"[{self.prefix}] Starting Quantum ESPRESSO Pipeline in {self.wkdir}...")
