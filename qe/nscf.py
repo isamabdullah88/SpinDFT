@@ -56,7 +56,7 @@ class NSCFInputBuilder:
             'calculation': 'nscf',
             'outdir': './',
             'prefix': self.prefix,
-            'disk_io': 'high',
+            'disk_io': 'low',
             'pseudo_dir': PSEUDO_DIR
         })
         

@@ -74,12 +74,12 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
             workspace.setwkdir(strain)
 
 
-            # startt = time.time()
+            startt = time.time()
             res = scf.run((strain, stntype))
             print(f"Strain {strain:.4f} ({stntype}): {res['status']}")
             writedb(db, res)
 
-            # workspace.cleanscf()
+            workspace.cleanscf()
 
             # print(f"Running Exchange Pipeline for Strain {strain:.4f} ({stntype})...")
             exchangepl = Exchange(
@@ -91,7 +91,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
             )
             exchangepl.run(res['atoms'], workspace.tmpdir)
 
-            # workspace.cleanwannier()
+            workspace.cleanwannier()
 
             endt = time.time()
             print(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
