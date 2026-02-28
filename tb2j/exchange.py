@@ -48,7 +48,7 @@ class Exchange:
         self.nscf_nbnds = nscf_nbnds
         self.wannier_nbnds = wannier_nbnds
 
-    def cleanup_heavy_files(self):
+    def cleanup(self):
         """Surgically removes massive intermediate files to save HPC quota."""
         print("\n--- Initiating HPC Quota Cleanup ---")
         
@@ -102,7 +102,7 @@ class Exchange:
         # Step 3: Conditional Cleanup
         # If the Wannier/TB2J run returns a SUCCESS status, delete the junk.
         if isinstance(result, dict) and result.get('status') == 'SUCCESS':
-            self.cleanup_heavy_files()
+            self.cleanup()
         else:
             print("\nWARNING: Pipeline step failed. Retaining heavy files for debugging purposes!")
             
