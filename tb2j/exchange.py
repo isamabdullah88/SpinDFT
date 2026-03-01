@@ -1,4 +1,5 @@
 import os
+import logging
 from ase.db import connect
 
 from .workspace import WorkspaceManager
@@ -16,12 +17,12 @@ class Exchange:
         self.nscf_nbnds = nscf_nbnds
         self.wannier_nbnds = wannier_nbnds
 
-    
+        self.logger = logging.getLogger("SpinDFT")
 
     def run(self, atoms, wkdir):
-        print(f"\n{'='*50}")
-        print(f"Executing Pipeline for Wkdir: {wkdir}")
-        print(f"{'='*50}")
+        self.logger.info(f"\n{'='*50}")
+        self.logger.info(f"Executing Pipeline for Wkdir: {wkdir}")
+        self.logger.info(f"{'='*50}")
         
         # Step 1: Explicit NSCF Calculation (using buffer bands)
         nscf = NSCF(
@@ -48,7 +49,7 @@ class Exchange:
         # if isinstance(result, dict) and result.get('status') == 'SUCCESS':
         #     self.cleanup()
         # else:
-        #     print("\nWARNING: Pipeline step failed. Retaining heavy files for debugging purposes!")
+        #     self.logger.warning("\nWARNING: Pipeline step failed. Retaining heavy files for debugging purposes!")
             
         # return result
 
@@ -76,12 +77,12 @@ if __name__ == "__main__":
         wannier_nbnds=WANNIER_NBNDS
     )
 
-    print(f"Connecting to database: {dbpath}")
+    exchangepl.logger.info(f"Connecting to database: {dbpath}")
     with connect(dbpath) as db:
         # Iterate through all database rows
         for row in db.select():
         # row = db.get(0)
-            print('row')
+            exchangepl.logger.info(f'Processing row ID: {row.id} with strain: {row["strain_value"]}')
             atoms = db.get_atoms(row.id)
             strain = row['strain_value']
 
