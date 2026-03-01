@@ -1,6 +1,7 @@
 import os
 import shutil
 from glob import glob
+import logging
 
 class WorkspaceManager:
     """Manages the creation of directories and injection of charge densities."""
@@ -13,7 +14,9 @@ class WorkspaceManager:
         if not os.path.exists(self.bwkdir):
             os.makedirs(self.bwkdir, exist_ok=True)
 
-        self.prefix = "[WorkspaceManager]"
+        self.logprefix = "[WorkspaceManager]"
+
+        self.logger = logging.getLogger("SpinDFT")
 
     def setwkdir(self, strain):
         """Creates temporary and output directories for a specific strain."""
@@ -23,7 +26,7 @@ class WorkspaceManager:
 
     def cleanscf(self):
         """Cleans up .hdf5 wavefunction files from the pwscf.save directory."""
-        print("\n--- Initiating SCF Cleanup ---")
+        self.logger.info(f"{self.logprefix} Initiating SCF Cleanup for {self.wkdir}...")
         if self.pwscfdir and os.path.exists(self.pwscfdir):
             for f in glob(os.path.join(self.pwscfdir, "*.hdf5")):
                 if os.path.basename(f) == "charge-density.hdf5":
@@ -31,15 +34,15 @@ class WorkspaceManager:
                 
                 os.remove(f)
 
-            print(f"{self.prefix} Cleaned up HDF5 files in {self.pwscfdir}")
+            self.logger.info(f"{self.logprefix} Cleaned up HDF5 files in {self.pwscfdir}")
 
     def cleanwannier(self):
         """Cleans up pwscf.save folder and other heavy files."""
-        print("\n--- Initiating Wannier Cleanup ---")
+        self.logger.info(f"{self.logprefix} Initiating Wannier Cleanup for {self.wkdir}")
         
         if os.path.exists(self.pwscfdir):
             shutil.rmtree(self.pwscfdir)
-            print(f"[Deleted] QE Save Directory: {self.pwscfdir}")
+            self.logger.info(f"{self.logprefix} Deleted QE Save Directory: {self.pwscfdir}")
             
         extensions = ['*.mmn', '*.amn', '*.chk', '*.eig', '*.nnkp', '*wfc*']
         dcount = 0
@@ -50,7 +53,7 @@ class WorkspaceManager:
                     os.remove(filepath)
                     dcount += 1
                 except OSError as e:
-                    print(f"Warning: Could not delete {filepath} - {e}")
+                    self.logger.warning(f"{self.logprefix} Could not delete {filepath} - {e}")
                     
-        print(f"[Deleted] {dcount} heavy Wannier90/QE matrix files.")
-        print("--- Cleanup Complete ---\n")
+        self.logger.info(f"{self.logprefix} Deleted {dcount} heavy Wannier90/QE matrix files.")
+        self.logger.info(f"{self.logprefix} --- Cleanup Complete ---\n")
