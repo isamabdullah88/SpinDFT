@@ -1,30 +1,10 @@
 import os
-import subprocess
 import copy
 import logging
 
 from ase.io.espresso import write_espresso_in
 from config import PSEUDO_DIR, PSEUDOS
-
-logger = logging.getLogger("SpinDFT")
-logprefix = "[NSCF]"
-
-class QEShellExecutor:
-    """Handles the execution of Quantum ESPRESSO shell commands."""
-    def __init__(self, wkdir, prefix):
-        self.wkdir = wkdir
-        self.prefix = prefix
-
-    def run_pw(self, numcores):
-        cmd = f"mpirun -np {numcores} pw.x -npool 4 -ndiag 4 < {self.prefix}.pwi > {self.prefix}.pwo"
-        logger.info(f"{logprefix} Executing: {cmd}")
-        
-        try:
-            subprocess.run(cmd, shell=True, cwd=self.wkdir, check=True)
-        except subprocess.CalledProcessError as e:
-            logger.error(f"{logprefix} ERROR during Quantum ESPRESSO execution!")
-            raise RuntimeError(f"Command failed with code {e.returncode}")
-
+from exchange import ShellExecutor
 
 class NSCFInputBuilder:
     """Manages the generation of Quantum ESPRESSO input files and k-point mapping."""
@@ -134,6 +114,10 @@ class NSCF:
         self.wkdir = os.path.abspath(wkdir)
         self.prefix = 'pwscf'
         
+        self.logprefix = "[NSCF]"
+        self.logger = logging.getLogger("SpinDFT")
+        
+        
         # Initialize sub-components
         self.builder = NSCFInputBuilder(
             atoms=self.atoms, 
@@ -144,14 +128,16 @@ class NSCF:
             soc=soc, 
             nbnds=nbnds
         )
-        self.executor = QEShellExecutor(self.wkdir, 'nscf')
+        self.executor = ShellExecutor(self.wkdir, self.logprefix)
 
     def run(self, numcores):
-        logger.info(f"{logprefix} Starting NSCF in {self.wkdir}...")
+        self.logger.info(f"{self.logprefix} Starting NSCF in {self.wkdir}...")
         
         self.builder.build()
         
-        self.executor.run_pw(numcores)
+        cmd = f"mpirun -np {numcores} pw.x -npool 4 -ndiag 4 < {self.prefix}.pwi > {self.prefix}.pwo"
+        self.executor.runcmd(cmd, serial=False)
         
-        logger.info(f"{logprefix} QE NSCF Pipeline completed successfully.")
+        self.logger.info(f"{self.logprefix} QE NSCF Pipeline completed successfully.")
+
         return self.atoms

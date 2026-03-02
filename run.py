@@ -2,13 +2,12 @@ import os
 import time
 from ase.db import connect
 from tqdm import tqdm
-import logging
 from logger import getlogger
 
 from qe import SCF
 from config import prep_strains
 from config import INPUT_SCF, PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, WANNIER_NBNDS
-from tb2j import Exchange, WorkspaceManager
+from exchange import Exchange, WorkspaceManager
 
 log = getlogger()
 log.info(f"Starting SpinDFT pipeline with phase: {PHASE}, VCRELAX: {VCRELAX}, Relaxation: {RELAX}")

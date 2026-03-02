@@ -35,23 +35,14 @@ class Exchange:
         )
         nscf.run(self.numcores)
 
-        # Step 2: Wannier90 & TB2J (using perfectly matched subset of bands)
+        # Wannier90 & TB2J
         wannier = Wannier90(
             wkdir=wkdir,
             kmesh=WAN_KPTS,
             soc=self.soc, 
             nbnds=self.wannier_nbnds
         )
-        result = wannier.run(atoms, self.numcores)
-        
-        # Step 3: Conditional Cleanup
-        # If the Wannier/TB2J run returns a SUCCESS status, delete the junk.
-        # if isinstance(result, dict) and result.get('status') == 'SUCCESS':
-        #     self.cleanup()
-        # else:
-        #     self.logger.warning("\nWARNING: Pipeline step failed. Retaining heavy files for debugging purposes!")
-            
-        # return result
+        wannier.run(atoms, self.numcores)
 
 if __name__ == "__main__":
     os.environ['OMP_NUM_THREADS'] = '1'
