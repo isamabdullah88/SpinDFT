@@ -215,19 +215,20 @@ class EspressoHubbard:
 
 if __name__ == "__main__":
     from ase.db import connect
-    from .CrI3 import CrI3Atom
+    from .CrI3 import CrI3
     hubbardcalc = EspressoHubbard(phase='AFM')
 
-    atoms = CrI3Atom().atoms
+    atoms = CrI3().batoms
 
-    wkdir = "./DataSets/CrI3/AFM/"
-    dbpath = os.path.join(wkdir, "CrI3_Uniaxial_VC_AFM.db")
+    wkdir = "./DataSets/HPC/Kpts-8x8/FM"
+    dbpath = os.path.join(wkdir, "Kpts-8x8.db")
 
-
+    strains = np.linspace(-0.15, 0.15, 21)
+    stntype = 'Uniaxial_X'
     with connect(dbpath) as db:
-        for strain in reversed([-0.0100, -0.0567, -0.1033, -0.1500]):
-            print('---')
-            pwopath = os.path.join(wkdir, f"AFM_strain_uniaxial_x_{strain:.4f}", "espresso.pwo")
+        for i, strain in enumerate(strains):
+            print(f'Writing to db: {i} of {len(strains)}')
+            pwopath = os.path.join(wkdir, f"Strain_Uniaxial_X_{strain:.4f}", "espresso.pwo")
             atoms = hubbardcalc.parse(pwopath, atoms)
 
             energy = atoms.get_potential_energy()
@@ -237,7 +238,7 @@ if __name__ == "__main__":
 
             result = {
                 'strain': strain,
-                'id': f"CrI3_Uniaxial_{strain:.4f}",
+                'id': f"CrI3_{stntype}_{strain:.4f}",
                 'status': 'SUCCESS',
                 'energy': energy,
                 'mag_moments': moms,

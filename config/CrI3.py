@@ -42,7 +42,7 @@ class CrI3:
         ]
 
         # Using scaled_positions allows ASE to automatically handle the Cartesian math
-        self.base_atoms = Atoms('Cr2I6', 
+        self.batoms = Atoms('Cr2I6', 
                            scaled_positions=scaled_positions, 
                            cell=cell, 
                            pbc=[True, True, True])
@@ -50,7 +50,7 @@ class CrI3:
     def write_baseline(self, filename="Data/CrI3_relaxed.cif"):
         """Saves the pristine 0% strain unit cell."""
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        self.base_atoms.write(filename)
+        self.batoms.write(filename)
         print(f"Success! Baseline '{filename}' has been created.")
 
     def strain_atoms(self, stntype, stnvalue):
@@ -60,7 +60,7 @@ class CrI3:
         Workflow:
         1. Checks if a relaxed structure file exists in `prerelaxed_dir` for this strain.
         2. If YES: Loads and returns it.
-        3. If NO: Takes the base_atoms, applies the strain mathematically to the cell, 
+        3. If NO: Takes the batoms, applies the strain mathematically to the cell, 
            and keeps the fractional coordinates identical.
         """
         # stntype = stntype.lower()
@@ -83,7 +83,7 @@ class CrI3:
         print(f"[CrI3] Applying {stnvalue} {stntype} strain to base structure...")
         
         # Create a copy so we don't mutate the original unstrained baseline
-        atoms = self.base_atoms.copy()
+        atoms = self.batoms.copy()
         
         # Get the original cell vectors
         cell = atoms.get_cell()
