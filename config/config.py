@@ -6,7 +6,7 @@ VCRELAX = False
 SOC = False
 
 NSCF_NBNDS = 100
-WANNIER_NBNDS = 100
+WANNIER_NBNDS = 80
 
 INPUT_SCF ={
     "control": {
