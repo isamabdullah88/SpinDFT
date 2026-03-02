@@ -5,7 +5,7 @@ from ase.db import connect
 from .workspace import WorkspaceManager
 from .wannier90 import Wannier90
 from qe import NSCF
-from config import KPTS, INPUT_SCF, NSCF_NBNDS, WANNIER_NBNDS, PHASE
+from config import KPTS, WAN_KPTS, INPUT_SCF, NSCF_NBNDS, WANNIER_NBNDS, PHASE
 
 
 class Exchange:
@@ -38,7 +38,7 @@ class Exchange:
         # Step 2: Wannier90 & TB2J (using perfectly matched subset of bands)
         wannier = Wannier90(
             wkdir=wkdir,
-            kmesh=self.kpts, 
+            kmesh=WAN_KPTS,
             soc=self.soc, 
             nbnds=self.wannier_nbnds
         )

@@ -68,7 +68,7 @@ class ShellExecutor:
 
 class WannierFileManager:
     """Manages the generation of input files and post-processing fixes for Wannier90."""
-    def __init__(self, wkdir, prefix, kmesh, soc, nbnds=None):
+    def __init__(self, wkdir, prefix, kmesh, soc, nbnds):
         self.wkdir = wkdir
         self.prefix = prefix
         self.kmesh = kmesh
@@ -78,10 +78,9 @@ class WannierFileManager:
     def write_win(self, atoms, seedname):
         nwann = 56 if self.soc else 28
         # Use provided nbnds if available, otherwise default to SOC/Collinear logic
-        nbnds = self.nbnds if self.nbnds is not None else (120 if self.soc else 80)
         
         win_content = (
-            f"num_bands = {nbnds}\n"
+            f"num_bands = {self.nbnds}\n"
             f"num_wann = {nwann}\n"
             "write_hr = .true.\n"    
             "write_xyz = .true.\n"   

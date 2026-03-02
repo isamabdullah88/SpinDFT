@@ -88,15 +88,17 @@ def sanitycheck(dbpath, plot=True):
 
 
 if __name__ == "__main__":
-    dbpathFM = 'DataSets/CrI3/FM/CrI3_Uniaxial_VC_FM.db'
-    dbpathAFM = 'DataSets/CrI3/AFM/CrI3_Uniaxial_VC_AFM.db'
+    import os
+    dbpathFM = './DataSets/HPC/Kpts-8x8/FM/Kpts-8x8.db'
+    print("BD exists:", os.path.exists(dbpathFM))
+    # dbpathAFM = 'DataSets/CrI3/AFM/CrI3_Uniaxial_VC_AFM.db'
 
     strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=True)
-    strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=True)
+    # strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=True)
 
     plt.figure(figsize=(10, 5))
     plt.plot(strainFM, energiesFM, 'o-', label='FM', c='b')
-    plt.plot(strainAFM, energiesAFM, 's-', label='AFM', c='r')
+    # plt.plot(strainAFM, energiesAFM, 's-', label='AFM', c='r')
     
     plt.xlabel('Strain Index')
     plt.ylabel('Total Energy (eV)')
