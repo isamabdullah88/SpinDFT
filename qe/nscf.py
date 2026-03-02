@@ -16,7 +16,7 @@ class QEShellExecutor:
         self.prefix = prefix
 
     def run_pw(self, numcores):
-        cmd = f"mpirun -np {numcores} pw.x -npool 4 < {self.prefix}.pwi > {self.prefix}.pwo"
+        cmd = f"mpirun -np {numcores} pw.x -npool 4 -ndiag 4 < {self.prefix}.pwi > {self.prefix}.pwo"
         logger.info(f"{logprefix} Executing: {cmd}")
         
         try:

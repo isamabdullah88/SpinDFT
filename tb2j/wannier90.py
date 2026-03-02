@@ -251,7 +251,7 @@ class Wannier90:
 
             # Step 2: Extract Matrices
             self.file_manager.write_pw2wan(seed, spin)
-            self.executor.runcmd(f"mpirun -np {numcores} pw2wannier90.x -npool 4 < {seed}.pw2wan", serial=False)
+            self.executor.runcmd(f"mpirun -np {numcores} pw2wannier90.x -npool 4 -ndiag 4 < {seed}.pw2wan", serial=False)
 
             # Step 3: Wannierization & Bug Fix
             werr_file = os.path.join(self.wkdir, f"{seed}.werr")
