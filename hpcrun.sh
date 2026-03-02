@@ -27,7 +27,7 @@ export OMP_NUM_THREADS=1
 echo "Beginning dataset generation..."
 
 # Run your Python script
-# (Ensure your Python script is set to loop sequentially and uses: mpirun -np 24 pw.x -npool 8)
+# (Ensure your Python script is set to loop sequentially and uses: mpirun -np 24 pw.x -npool 4)
 python run.py --WKDIR "/scratch/isam.Balghari/DataSets/Relaxed" --DBPATH "/scratch/isam.Balghari/DataSets/Relaxed/Relaxed.db" --N_CALCULATIONS 21 --CORES_PER_JOB 24 --PRERELAXED_DIR None
 
 echo "All configurations complete!"

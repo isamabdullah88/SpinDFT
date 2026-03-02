@@ -1,5 +1,6 @@
 import logging
 import sys
+from datetime import datetime
 
 class ColoredFormatter(logging.Formatter):
     """Custom formatter to add colors to terminal output based on log level."""
@@ -30,7 +31,7 @@ class ColoredFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def getlogger(name="SpinDFT", logfile="pipeline_execution.log"):
+def getlogger(name="SpinDFT"):
     """
     Sets up a dual-output logger:
     - Prints COLORED INFO, WARNING, and ERROR to the terminal.
@@ -51,6 +52,8 @@ def getlogger(name="SpinDFT", logfile="pipeline_execution.log"):
             '%(asctime)s | %(levelname)-8s | %(message)s', 
             datefmt='%Y-%m-%d %H:%M:%S'
         )
+
+        logfile=f"SpinDFT_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         file = logging.FileHandler(logfile)
         file.setLevel(logging.DEBUG) 
         file.setFormatter(plain_formatter) # Keep the file clean!
