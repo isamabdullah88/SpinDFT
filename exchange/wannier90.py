@@ -1,70 +1,9 @@
 import os
-import shutil
-import subprocess
-import sys
 import re
 import logging
 
-logger = logging.getLogger("SpinDFT")
-
-class ShellExecutor:
-    """Handles the execution of shell commands, environment injection, and MPI parsing.
-       Silently logs all standard output to a file instead of dumping to the console.
-    """
-    def __init__(self, wkdir, prefix):
-        self.wkdir = wkdir
-        self.prefix = prefix
-        # Define the log file path where all outputs will be quietly stored
-        self.log_file = os.path.join(self.wkdir, f"{self.prefix}_execution.log")
-
-    def runcmd(self, command, serial=False, env=None):
-        if serial and "mpirun" in command:
-            parts = command.split()
-            executable = next((p for p in parts if ".x" in p or "wannier" in p), None)
-            if executable:
-                command = " ".join(parts[parts.index(executable):])
-        
-        print(f"[{self.prefix}] Executing: {command} (Output redirected to log)")
-        
-        run_env = os.environ.copy()
-        if env: 
-            run_env.update(env)
-            
-        try:
-            result = subprocess.run(
-                command, shell=True, cwd=self.wkdir,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                text=True, check=True, env=run_env
-            )
-            
-            # --- THE FIX: Append the output to a log file instead of printing ---
-            # with open(self.log_file, 'a') as log:
-            logger.debug(f"{'='*50}\n")
-            logger.debug(f"COMMAND: {command}")
-            logger.debug(f"{'='*50}\n")
-            if result.stdout.strip():
-                logger.debug(result.stdout.strip())
-            if result.stderr.strip():
-                logger.warning("--- STDERR / WARNINGS ---")
-                logger.warning(result.stderr.strip())
-            logger.debug("\n")
-                
-            return result.stdout
-            
-        except subprocess.CalledProcessError as e:
-            print(f"[{self.prefix}] ERROR in command: {command}")
-            print(f"[{self.prefix}] Check the log file for full details: {self.log_file}")
-            
-            # Log the crash details before killing the script
-            # with open(self.log_file, 'a') as log:
-            logger.error(f"{'!'*50}")
-            logger.error(f"CRASH IN COMMAND: {command}")
-            logger.error(f"EXIT CODE: {e.returncode}")
-            logger.error(f"STDERR:\n{e.stderr.strip()}")
-            logger.error(f"{'!'*50}\n\n")
-                
-            raise RuntimeError(f"Command failed with code {e.returncode}. See log for details.")
-
+from .shell import ShellExecutor
+from .TB2J import TB2JExchange
 
 class WannierFileManager:
     """Manages the generation of input files and post-processing fixes for Wannier90."""
@@ -77,7 +16,6 @@ class WannierFileManager:
 
     def write_win(self, atoms, seedname):
         nwann = 56 if self.soc else 28
-        # Use provided nbnds if available, otherwise default to SOC/Collinear logic
         
         win_content = (
             f"num_bands = {self.nbnds}\n"
@@ -182,41 +120,7 @@ class QEOutputParser:
         return "0.0"
 
 
-class TB2JExchange:
-    """Configures and runs the TB2J exchange calculation."""
-    def __init__(self, wkdir, prefix, kmesh, soc, executor):
-        self.wkdir = wkdir
-        # self.outdir = outdir
-        self.prefix = prefix
-        self.kmesh = kmesh
-        self.soc = soc
-        self.executor = executor
 
-    def calculate(self, efermi):
-        logger.info(f"\n[{self.prefix}] Step 4: TB2J exchange calculation...")
-        wann2j_exe = shutil.which("wann2J.py") or os.path.join(os.path.dirname(sys.executable), "wann2J.py")
-        if not wann2j_exe or not os.path.exists(wann2j_exe):
-            raise RuntimeError("wann2J.py executable not found in path.")
-            
-        kx, ky, kz = self.kmesh
-        logger.info(f"[{self.prefix}] Detected Fermi Energy: {efermi} eV")
-        
-        if self.soc: 
-            cmd = f"{wann2j_exe} --posfile {self.prefix}.win --prefix_spinor {self.prefix} --elements Cr --kmesh {kx} {ky} {kz} --spinor --efermi {efermi}"
-        else:
-            cmd = f"{wann2j_exe} --posfile {self.prefix}_up.win --prefix_up {self.prefix}_up --prefix_down {self.prefix}_down --elements Cr --kmesh {kx} {ky} {kz} --efermi {efermi}"
-            
-        self.executor.runcmd(cmd)
-        
-        outpath = os.path.join(self.wkdir, 'TB2J_results', 'Multibinit', 'exchange.xml')
-        if os.path.exists(outpath):
-            # final_path = os.path.join(self.outdir, f"exchange_{self.prefix}.xml")
-            # shutil.copy(outpath, final_path)
-            logger.info(f"[{self.prefix}] Pipeline complete! Result saved to {outpath}")
-            return {'status': 'SUCCESS', 'file': outpath}
-        else:
-            logger.warning(f"[{self.prefix}] Pipeline failed: exchange.xml not found at {outpath}")
-            return {'status': 'TB2J_FAIL'}
 
 
 class Wannier90:
@@ -237,12 +141,15 @@ class Wannier90:
         self.qe_parser = QEOutputParser(self.wkdir, self.prefix)
         self.tb2j = TB2JExchange(self.wkdir, self.prefix, self.kmesh, self.soc, self.executor)
 
+        self.logprefix = "[Wannier90]"
+        self.logger = logging.getLogger("SpinDFT")
+
     def run(self, atoms, numcores):
         seednames, spins = ([self.prefix], ['none']) if self.soc else ([f"{self.prefix}_up", f"{self.prefix}_down"], ['up', 'down'])
-        logger.info(f"[{self.prefix}] Starting Wannier90 extraction for components: {spins} with {numcores} cores.")
+        self.logger.info(f"{self.logprefix} Starting Wannier90 extraction for components: {spins} with {numcores} cores.")
 
         for seed, spin in zip(seednames, spins):
-            logger.info(f"\n--- Processing Spin Component: {spin.upper()} ---")
+            self.logger.info(f"\n--- Processing Spin Component: {spin.upper()} ---")
             
             # Step 1: Pre-processing
             self.file_manager.write_win(atoms, seedname=seed)
