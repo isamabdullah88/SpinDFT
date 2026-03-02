@@ -2,11 +2,16 @@ import os
 import time
 from ase.db import connect
 from tqdm import tqdm
+import logging
+from logger import getlogger
 
 from qe import SCF
 from config import prep_strains
 from config import INPUT_SCF, PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, WANNIER_NBNDS
 from tb2j import Exchange, WorkspaceManager
+
+log = getlogger()
+log.info(f"Starting SpinDFT pipeline with phase: {PHASE}, VCRELAX: {VCRELAX}, Relaxation: {RELAX}")
 
 def writedb(db, res):
     if res['status'] != 'SUCCESS':
@@ -39,15 +44,37 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     NWORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
 
     os.environ['OMP_NUM_THREADS'] = '1'
+
+    # TODO: DO this to prevent cache memeory error after long runs
+    # THE FIX: Disable OpenMPI's buggy "vader" shared memory module
+    # env["OMPI_MCA_btl_vader_single_copy_mechanism"] = "none"
     
-    print(f"--- Resource Optimization ---")
-    print(f"Total Cores Detected: {TOTAL_CORES}")
-    print(f"Running {NWORKERS} concurrent jobs with {CORES_PER_JOB} cores each.")
-    print("-----------------------------")
-    print(f"Using K-Points: {KPTS}")
-    print(f"Phase: {PHASE}")
-    print(f"VC-Relax Enabled: {VCRELAX}")
-    print(f"Relaxation: {RELAX}")
+    # # Optional: Prevent OpenBLAS from spawning too many threads in pure python scripts
+    # if "wann2J.py" in cmd or serial:
+    #     env["OMP_NUM_THREADS"] = "1"
+    #     env["OPENBLAS_NUM_THREADS"] = "1"
+    
+    # Format the configuration into a single beautiful text block
+    configsummary = (
+        "\n"
+        "==================================================\n"
+        "             PIPELINE CONFIGURATION               \n"
+        "==================================================\n"
+        " [ Resource Optimization ]\n"
+        f"   Total Cores        :  {TOTAL_CORES}\n"
+        f"   Concurrent Jobs    :  {NWORKERS}\n"
+        f"   Cores per Job      :  {CORES_PER_JOB}\n"
+        "\n"
+        " [ Physics Parameters ]\n"
+        f"   Phase              :  {PHASE}\n"
+        f"   K-Points           :  {KPTS}\n"
+        f"   VC-Relax           :  {VCRELAX}\n"
+        f"   Relaxation         :  {RELAX}\n"
+        "=================================================="
+    )
+    
+    # Log the entire block exactly once
+    log.info(configsummary)
 
     wkdir = os.path.join(wkdir, PHASE)
 
@@ -57,15 +84,14 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
 
     if VCRELAX:
         res = scf.run(None, VCRELAX)
-        print(f"VC-Relax Run: {res['status']}")
+        log.info(f"VC-Relax Run: {res['status']}")
         writedb(connect(dbpath), res)
         return
     
-
     # Generate strain tasks
     tasks = prep_strains(count = ncalculations)
     
-    print(f"Starting Production Run...")
+    log.info(f"Starting Production Run...")
     
     with connect(dbpath) as db:
         for task in tasks:
@@ -73,18 +99,18 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
 
             workspace.setwkdir(strain)
 
-
             startt = time.time()
+
             res = scf.run((strain, stntype))
-            print(f"Strain {strain:.4f} ({stntype}): {res['status']}")
             writedb(db, res)
+
+            log.info(f"Strain {strain:.4f} ({stntype}): {res['status']}")
 
             workspace.cleanscf()
 
-            # print(f"Running Exchange Pipeline for Strain {strain:.4f} ({stntype})...")
             exchangepl = Exchange(
                 kpts=KPTS, 
-                soc=False, 
+                soc=SOC, 
                 numcores=CORES_PER_JOB,
                 nscf_nbnds=NSCF_NBNDS,
                 wannier_nbnds=WANNIER_NBNDS
@@ -94,7 +120,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
             workspace.cleanwannier()
 
             endt = time.time()
-            print(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
+            log.info(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
 
 if __name__ == "__main__":
     import argparse
@@ -111,4 +137,4 @@ if __name__ == "__main__":
     run(dbpath=args.DBPATH, wkdir=args.WKDIR, prerelaxed_dir=args.PRERELAXED_DIR,
         ncalculations=args.N_CALCULATIONS, coresperjob=args.CORES_PER_JOB)
     endt = time.time()
-    print(f"Total runtime: {endt - startt:.2f} seconds")
+    log.info(f"Total runtime: {endt - startt:.2f} seconds")

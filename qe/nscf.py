@@ -1,8 +1,13 @@
 import os
 import subprocess
 import copy
+import logging
+
 from ase.io.espresso import write_espresso_in
 from config import PSEUDO_DIR, PSEUDOS
+
+logger = logging.getLogger("SpinDFT")
+logprefix = "[NSCF]"
 
 class QEShellExecutor:
     """Handles the execution of Quantum ESPRESSO shell commands."""
@@ -11,13 +16,13 @@ class QEShellExecutor:
         self.prefix = prefix
 
     def run_pw(self, numcores):
-        cmd = f"mpirun -np {numcores} pw.x -npool 4 < {self.prefix}.pwi > {self.prefix}.pwo"
-        print(f"[{self.prefix}] Executing: {cmd}")
+        cmd = f"mpirun -np {numcores} pw.x -npool 4 -ndiag 4 < {self.prefix}.pwi > {self.prefix}.pwo"
+        logger.info(f"{logprefix} Executing: {cmd}")
         
         try:
             subprocess.run(cmd, shell=True, cwd=self.wkdir, check=True)
         except subprocess.CalledProcessError as e:
-            print(f"[{self.prefix}] ERROR during Quantum ESPRESSO execution!")
+            logger.error(f"{logprefix} ERROR during Quantum ESPRESSO execution!")
             raise RuntimeError(f"Command failed with code {e.returncode}")
 
 
@@ -142,14 +147,11 @@ class NSCF:
         self.executor = QEShellExecutor(self.wkdir, 'nscf')
 
     def run(self, numcores):
-        print(f"[{self.prefix}] Starting Quantum ESPRESSO Pipeline in {self.wkdir}...")
-        print(f"[{self.prefix}] Step 1: Executing NSCF (Explicit K-point Mapping)...")
+        logger.info(f"{logprefix} Starting NSCF in {self.wkdir}...")
         
-        # 1. Build the .pwi file
         self.builder.build()
         
-        # 2. Execute pw.x
         self.executor.run_pw(numcores)
         
-        print(f"[{self.prefix}] QE NSCF Pipeline completed successfully.")
+        logger.info(f"{logprefix} QE NSCF Pipeline completed successfully.")
         return self.atoms

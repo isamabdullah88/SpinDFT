@@ -3,6 +3,9 @@ import shutil
 import subprocess
 import sys
 import re
+import logging
+
+logger = logging.getLogger("SpinDFT")
 
 class ShellExecutor:
     """Handles the execution of shell commands, environment injection, and MPI parsing.
@@ -35,16 +38,16 @@ class ShellExecutor:
             )
             
             # --- THE FIX: Append the output to a log file instead of printing ---
-            with open(self.log_file, 'a') as log:
-                log.write(f"{'='*50}\n")
-                log.write(f"COMMAND: {command}\n")
-                log.write(f"{'='*50}\n")
-                if result.stdout.strip():
-                    log.write(result.stdout.strip() + "\n")
-                if result.stderr.strip():
-                    log.write("--- STDERR / WARNINGS ---\n")
-                    log.write(result.stderr.strip() + "\n")
-                log.write("\n")
+            # with open(self.log_file, 'a') as log:
+            logger.debug(f"{'='*50}\n")
+            logger.debug(f"COMMAND: {command}")
+            logger.debug(f"{'='*50}\n")
+            if result.stdout.strip():
+                logger.debug(result.stdout.strip())
+            if result.stderr.strip():
+                logger.warning("--- STDERR / WARNINGS ---")
+                logger.warning(result.stderr.strip())
+            logger.debug("\n")
                 
             return result.stdout
             
@@ -53,19 +56,19 @@ class ShellExecutor:
             print(f"[{self.prefix}] Check the log file for full details: {self.log_file}")
             
             # Log the crash details before killing the script
-            with open(self.log_file, 'a') as log:
-                log.write(f"{'!'*50}\n")
-                log.write(f"CRASH IN COMMAND: {command}\n")
-                log.write(f"EXIT CODE: {e.returncode}\n")
-                log.write(f"STDERR:\n{e.stderr.strip()}\n")
-                log.write(f"{'!'*50}\n\n")
+            # with open(self.log_file, 'a') as log:
+            logger.error(f"{'!'*50}")
+            logger.error(f"CRASH IN COMMAND: {command}")
+            logger.error(f"EXIT CODE: {e.returncode}")
+            logger.error(f"STDERR:\n{e.stderr.strip()}")
+            logger.error(f"{'!'*50}\n\n")
                 
             raise RuntimeError(f"Command failed with code {e.returncode}. See log for details.")
 
 
 class WannierFileManager:
     """Manages the generation of input files and post-processing fixes for Wannier90."""
-    def __init__(self, wkdir, prefix, kmesh, soc, nbnds=None):
+    def __init__(self, wkdir, prefix, kmesh, soc, nbnds):
         self.wkdir = wkdir
         self.prefix = prefix
         self.kmesh = kmesh
@@ -75,10 +78,9 @@ class WannierFileManager:
     def write_win(self, atoms, seedname):
         nwann = 56 if self.soc else 28
         # Use provided nbnds if available, otherwise default to SOC/Collinear logic
-        nbnds = self.nbnds if self.nbnds is not None else (120 if self.soc else 80)
         
         win_content = (
-            f"num_bands = {nbnds}\n"
+            f"num_bands = {self.nbnds}\n"
             f"num_wann = {nwann}\n"
             "write_hr = .true.\n"    
             "write_xyz = .true.\n"   
@@ -191,13 +193,13 @@ class TB2JExchange:
         self.executor = executor
 
     def calculate(self, efermi):
-        print(f"\n[{self.prefix}] Step 4: TB2J exchange calculation...")
+        logger.info(f"\n[{self.prefix}] Step 4: TB2J exchange calculation...")
         wann2j_exe = shutil.which("wann2J.py") or os.path.join(os.path.dirname(sys.executable), "wann2J.py")
         if not wann2j_exe or not os.path.exists(wann2j_exe):
             raise RuntimeError("wann2J.py executable not found in path.")
             
         kx, ky, kz = self.kmesh
-        print(f"[{self.prefix}] Detected Fermi Energy: {efermi} eV")
+        logger.info(f"[{self.prefix}] Detected Fermi Energy: {efermi} eV")
         
         if self.soc: 
             cmd = f"{wann2j_exe} --posfile {self.prefix}.win --prefix_spinor {self.prefix} --elements Cr --kmesh {kx} {ky} {kz} --spinor --efermi {efermi}"
@@ -210,10 +212,10 @@ class TB2JExchange:
         if os.path.exists(outpath):
             # final_path = os.path.join(self.outdir, f"exchange_{self.prefix}.xml")
             # shutil.copy(outpath, final_path)
-            print(f"[{self.prefix}] Pipeline complete! Result saved to {outpath}")
+            logger.info(f"[{self.prefix}] Pipeline complete! Result saved to {outpath}")
             return {'status': 'SUCCESS', 'file': outpath}
         else:
-            print(f"[{self.prefix}] Pipeline failed: exchange.xml not found at {outpath}")
+            logger.warning(f"[{self.prefix}] Pipeline failed: exchange.xml not found at {outpath}")
             return {'status': 'TB2J_FAIL'}
 
 
@@ -237,10 +239,10 @@ class Wannier90:
 
     def run(self, atoms, numcores):
         seednames, spins = ([self.prefix], ['none']) if self.soc else ([f"{self.prefix}_up", f"{self.prefix}_down"], ['up', 'down'])
-        print(f"[{self.prefix}] Starting Wannier90 extraction for components: {spins} with {numcores} cores.")
+        logger.info(f"[{self.prefix}] Starting Wannier90 extraction for components: {spins} with {numcores} cores.")
 
         for seed, spin in zip(seednames, spins):
-            print(f"\n--- Processing Spin Component: {spin.upper()} ---")
+            logger.info(f"\n--- Processing Spin Component: {spin.upper()} ---")
             
             # Step 1: Pre-processing
             self.file_manager.write_win(atoms, seedname=seed)
@@ -248,7 +250,7 @@ class Wannier90:
 
             # Step 2: Extract Matrices
             self.file_manager.write_pw2wan(seed, spin)
-            self.executor.runcmd(f"mpirun -np {numcores} pw2wannier90.x -npool 4 < {seed}.pw2wan", serial=False)
+            self.executor.runcmd(f"mpirun -np {numcores} pw2wannier90.x -npool 4 -ndiag 4 < {seed}.pw2wan", serial=False)
 
             # Step 3: Wannierization & Bug Fix
             werr_file = os.path.join(self.wkdir, f"{seed}.werr")

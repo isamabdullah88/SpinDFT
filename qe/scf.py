@@ -1,6 +1,7 @@
 from config import CrI3, EspressoHubbard, INPUT_SCF
 import os
 import numpy as np
+import logging
 
 class SCF:
     # ---------------------------------------------------------------------------------------------
@@ -9,8 +10,11 @@ class SCF:
         self.kpts = kpts
         self.phase = phase
         self.cores_per_job = cores_per_job
+        self.prefix = "[SCF]"
 
         self.CrI3 = CrI3(prerelaxed_dir=prerelaxed_dir)
+
+        self.logger = logging.getLogger("SpinDFT")
         
     # ---------------------------------------------------------------------------------------------
     def initmags(self, atoms):
@@ -47,7 +51,7 @@ class SCF:
 
         atoms = self.initmags(atoms)
         
-        print(f"Running SCF for Strain {strain:.4f} ({stntype})")
+        self.logger.info(f"{self.prefix} Running SCF for Strain {strain:.4f} ({stntype})")
         wkdir = os.path.join(self.wkdir, f"Strain_{stntype}_{strain:.4f}")
         os.makedirs(wkdir, exist_ok=True)
         
@@ -80,7 +84,7 @@ class SCF:
             'atoms': atomsout
         })
 
-        # print(f"Strain {strain:.4f}: SCF SUCCESS - Energy: {energy:.4f} eV, Mag Moments: {moms}")
+        self.logger.info(f"{self.prefix} Strain {strain:.4f}: SCF SUCCESS - Energy: {energy:.4f} eV, Mag Moments: {moms}")
 
         return result
         

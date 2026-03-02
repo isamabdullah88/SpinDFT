@@ -42,8 +42,11 @@ INPUT_SCF ={
 
 KPTS = (8, 8, 1)
 
+WAN_KPTS = (36, 36, 1)
+
 if RELAX:
     INPUT_SCF["control"]["calculation"] = "relax"
+    KPTS = (4, 4, 1)
 
 if VCRELAX:
     INPUT_SCF["control"]["calculation"] = "vc-relax"
