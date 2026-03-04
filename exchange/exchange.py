@@ -4,8 +4,9 @@ from ase.db import connect
 
 from .workspace import WorkspaceManager
 from .wannier90 import Wannier90
+from .TB2J import TB2JExchange
 from qe import NSCF
-from config import KPTS, WAN_KPTS, INPUT_SCF, NSCF_NBNDS, WANNIER_NBNDS, PHASE
+from config import KPTS, TB2J_KPTS, INPUT_SCF, NSCF_NBNDS, WANNIER_NBNDS, PHASE
 
 
 class Exchange:
@@ -35,14 +36,23 @@ class Exchange:
         )
         nscf.run(self.numcores)
 
-        # Wannier90 & TB2J
+        # Wannier90
         wannier = Wannier90(
             wkdir=wkdir,
-            kmesh=WAN_KPTS,
+            kmesh=KPTS,
             soc=self.soc, 
-            nbnds=self.wannier_nbnds
+            nscf_nbnds=self.nscf_nbnds,
+            wannier_nbnds=self.wannier_nbnds
         )
         wannier.run(atoms, self.numcores)
+
+        # TB2J
+        self.tb2j = TB2JExchange(
+            wkdir,
+            TB2J_KPTS, 
+            self.soc, 
+        )
+        self.tb2j.run()
 
 if __name__ == "__main__":
     os.environ['OMP_NUM_THREADS'] = '1'
