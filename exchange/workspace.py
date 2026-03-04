@@ -27,6 +27,7 @@ class WorkspaceManager:
     def cleanscf(self):
         """Cleans up .hdf5 wavefunction files from the pwscf.save directory."""
         self.logger.info(f"{self.logprefix} Initiating SCF Cleanup for {self.wkdir}...")
+        
         if self.pwscfdir and os.path.exists(self.pwscfdir):
             for f in glob(os.path.join(self.pwscfdir, "*.hdf5")):
                 if os.path.basename(f) == "charge-density.hdf5":
@@ -35,6 +36,16 @@ class WorkspaceManager:
                 os.remove(f)
 
             self.logger.info(f"{self.logprefix} Cleaned up HDF5 files in {self.pwscfdir}")
+
+        if self.pwscfdir and os.path.exists(self.pwscfdir):
+            for f in glob(os.path.join(self.pwscfdir, "*.dat")):
+                if os.path.basename(f) == "charge-density.dat":
+                    continue
+                
+                os.remove(f)
+            
+        self.logger.info(f"{self.logprefix} Cleaned up DAT files in {self.pwscfdir}")
+        self.logger.info(f"{self.logprefix} --- SCF Cleanup Complete ---\n")
 
     def cleanwannier(self):
         """Cleans up pwscf.save folder and other heavy files."""

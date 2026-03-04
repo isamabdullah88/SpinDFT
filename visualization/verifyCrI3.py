@@ -89,16 +89,22 @@ def sanitycheck(dbpath, plot=True):
 
 if __name__ == "__main__":
     import os
-    dbpathFM = './DataSets/HPC/Kpts-8x8/FM/Kpts-8x8.db'
+    dbpathFM = './DataSets/HPC/Kpts-10x10/FM/Kpts-10x10-FM.db'
+    dbpathAFM = 'DataSets/HPC/Kpts-10x10/AFM/Kpts-10x10-AFM.db'
     print("BD exists:", os.path.exists(dbpathFM))
-    # dbpathAFM = 'DataSets/CrI3/AFM/CrI3_Uniaxial_VC_AFM.db'
+    print("BD exists:", os.path.exists(dbpathAFM))
 
-    strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=True)
-    # strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=True)
+    strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=False)
+    strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=False)
 
     plt.figure(figsize=(10, 5))
+
+    minFM = np.argmin(energiesFM)
+    minAFM = np.argmin(energiesAFM)
+    print('minFM:', strainFM[minFM], energiesFM[minFM])
+    print('minAFM:', strainAFM[minAFM], energiesAFM[minAFM])
     plt.plot(strainFM, energiesFM, 'o-', label='FM', c='b')
-    # plt.plot(strainAFM, energiesAFM, 's-', label='AFM', c='r')
+    plt.plot(strainAFM, energiesAFM, 's-', label='AFM', c='r')
     
     plt.xlabel('Strain Index')
     plt.ylabel('Total Energy (eV)')
