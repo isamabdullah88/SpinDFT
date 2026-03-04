@@ -4,6 +4,7 @@ from ase import Atoms
 from ase.io import read
 
 from .config import PHASE
+import logging
 
 class CrI3:
     def __init__(self, a=6.913154, c=19.260000, dz=1.618870, prerelaxed_dir=None):
@@ -46,12 +47,15 @@ class CrI3:
                            scaled_positions=scaled_positions, 
                            cell=cell, 
                            pbc=[True, True, True])
+        
+        self.logprefix = "[CrI3]"
+        self.logger = logging.getLogger("SpinDFT")
 
     def write_baseline(self, filename="Data/CrI3_relaxed.cif"):
         """Saves the pristine 0% strain unit cell."""
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         self.batoms.write(filename)
-        print(f"Success! Baseline '{filename}' has been created.")
+        self.logger.info(f"{self.logprefix} Success! Baseline '{filename}' has been created.")
 
     def strain_atoms(self, stntype, stnvalue):
         """
@@ -74,13 +78,13 @@ class CrI3:
             filepath = os.path.join(self.prerelaxed_dir, PHASE, filename)
             
             if os.path.exists(filepath):
-                print(f"[CrI3] Found relaxed structure. Loading {filename}...")
+                self.logger.info(f"{self.logprefix} Found relaxed structure. Loading {filename}...")
                 return read(filepath)
             else:
-                print(f"[CrI3] No pre-relaxed file found at {filepath}. Generating mathematically...")
+                self.logger.info(f"{self.logprefix} No pre-relaxed file found at {filepath}. Generating mathematically...")
 
         # 2. Fallback: Generate unrelaxed strained structure mathematically
-        print(f"[CrI3] Applying {stnvalue} {stntype} strain to base structure...")
+        self.logger.info(f"{self.logprefix} Applying {stnvalue} {stntype} strain to base structure...")
         
         # Create a copy so we don't mutate the original unstrained baseline
         atoms = self.batoms.copy()
@@ -120,5 +124,5 @@ if __name__ == "__main__":
     print("\nBiaxial Cell:\n", biaxial_atoms.get_cell())
     
     # Request a 2% UNIAXIAL strain
-    uniaxial_atoms = cri3_manager.strain_atoms(stntype="Uniaxial", stnvalue=0.02)
+    uniaxial_atoms = cri3_manager.strain_atoms(stntype="Uniaxial_X", stnvalue=0.02)
     print("\nUniaxial Cell:\n", uniaxial_atoms.get_cell())

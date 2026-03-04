@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from datetime import datetime
 
@@ -53,8 +54,10 @@ def getlogger(name="SpinDFT"):
             datefmt='%Y-%m-%d %H:%M:%S'
         )
 
+        logdir = "SpinDFTLogs"
+        os.makedirs(logdir, exist_ok=True)
         logfile=f"SpinDFT_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-        file = logging.FileHandler(logfile)
+        file = logging.FileHandler(os.path.join(logdir, logfile))
         file.setLevel(logging.DEBUG) 
         file.setFormatter(plain_formatter) # Keep the file clean!
 

@@ -4,7 +4,7 @@ import logging
 
 from ase.io.espresso import write_espresso_in
 from config import PSEUDO_DIR, PSEUDOS
-from exchange import ShellExecutor
+from config import ShellExecutor
 
 class NSCFInputBuilder:
     """Manages the generation of Quantum ESPRESSO input files and k-point mapping."""
@@ -46,13 +46,13 @@ class NSCFInputBuilder:
         })
         
         # Dynamic band allocation logic using the passed parameter
-        target_nbnds = self.nbnds if self.nbnds is not None else (180 if self.soc else 140)
+        # target_nbnds = self.nbnds if self.nbnds is not None else (180 if self.soc else 140)
         
         # nosym and noinv MUST be forced here to map the charge density to the full grid
         input_nscf['system'].update({
             'nosym': True,
             'noinv': True,
-            'nbnd': target_nbnds
+            'nbnd': self.nbnds
         })
         
         # Force QE to converge empty bands with the exact same strict tolerance as occupied bands
@@ -109,7 +109,7 @@ class NSCF:
     Bypasses ASE's calculation cache by forcefully writing inputs and using 
     subprocess. This guarantees the NSCF step executes cleanly with explicit k-points.
     """
-    def __init__(self, atoms, INPUT_SCF, wkdir, kmesh=(2, 2, 1), soc=False, nbnds=None):
+    def __init__(self, atoms, INPUT_SCF, wkdir, kmesh, soc, nbnds):
         self.atoms = atoms.copy()
         self.wkdir = os.path.abspath(wkdir)
         self.prefix = 'pwscf'
@@ -135,7 +135,7 @@ class NSCF:
         
         self.builder.build()
         
-        cmd = f"mpirun -np {numcores} pw.x -npool 4 -ndiag 4 < {self.prefix}.pwi > {self.prefix}.pwo"
+        cmd = f"mpirun -np {numcores} pw.x -npool 4 -ndiag 4 < nscf.pwi > nscf.pwo"
         self.executor.runcmd(cmd, serial=False)
         
         self.logger.info(f"{self.logprefix} QE NSCF Pipeline completed successfully.")

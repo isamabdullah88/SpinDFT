@@ -4,21 +4,29 @@ import shutil
 import os
 import sys
 
+from config import ShellExecutor
+from .fermi import FermiParser
+
 
 class TB2JExchange:
     """Configures and runs the TB2J exchange calculation."""
-    def __init__(self, wkdir, prefix, kmesh, soc, executor):
+    def __init__(self, wkdir, kmesh, soc):
         self.wkdir = wkdir
         # self.outdir = outdir
-        self.prefix = prefix
+        self.prefix = 'pwscf'
         self.kmesh = kmesh
         self.soc = soc
-        self.executor = executor
+        self.executor = ShellExecutor(self.wkdir, "[TB2J]")
+        self.qe_parser = FermiParser(self.wkdir, self.prefix)
 
         self.logprefix = "[TB2J]"
         self.logger = logging.getLogger("SpinDFT")
 
-    def calculate(self, efermi):
+    def run(self):
+
+        # Step 4: Calculate Exchange Interactions
+        efermi = self.qe_parser.efermi()
+
         self.logger.info(f"{self.logprefix} TB2J exchange calculation...")
 
         wann2jexe = shutil.which("wann2J.py") or os.path.join(os.path.dirname(sys.executable), "wann2J.py")

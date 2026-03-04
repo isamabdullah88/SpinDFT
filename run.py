@@ -9,7 +9,7 @@ from config import prep_strains
 from config import INPUT_SCF, PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, WANNIER_NBNDS
 from exchange import Exchange, WorkspaceManager
 
-log = getlogger()
+log = getlogger("SpinDFT")
 log.info(f"Starting SpinDFT pipeline with phase: {PHASE}, VCRELAX: {VCRELAX}, Relaxation: {RELAX}")
 
 def writedb(db, res):

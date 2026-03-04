@@ -3,7 +3,7 @@ import platform
 import os
 import re
 import numpy as np
-from ase.io.espresso import write_espresso_in, read_espresso_out
+from ase.io.espresso import write_espresso_in
 from ase.calculators.singlepoint import SinglePointCalculator
 
 from .config import INPUT_SCF, PSEUDOS, KPTS
@@ -216,12 +216,12 @@ class EspressoHubbard:
 if __name__ == "__main__":
     from ase.db import connect
     from .CrI3 import CrI3
-    hubbardcalc = EspressoHubbard(phase='AFM')
+    hubbardcalc = EspressoHubbard(phase='FM')
 
     atoms = CrI3().batoms
 
-    wkdir = "./DataSets/HPC/Kpts-8x8/FM"
-    dbpath = os.path.join(wkdir, "Kpts-8x8.db")
+    wkdir = "./DataSets/HPC/Kpts-10x10/FM"
+    dbpath = os.path.join(wkdir, "Kpts-10x10-FM.db")
 
     strains = np.linspace(-0.15, 0.15, 21)
     stntype = 'Uniaxial_X'
@@ -229,6 +229,10 @@ if __name__ == "__main__":
         for i, strain in enumerate(strains):
             print(f'Writing to db: {i} of {len(strains)}')
             pwopath = os.path.join(wkdir, f"Strain_Uniaxial_X_{strain:.4f}", "espresso.pwo")
+
+            if not os.path.exists(pwopath):
+                print(f"Output file not found for strain {strain:.4f}. Skipping...")
+                continue
             atoms = hubbardcalc.parse(pwopath, atoms)
 
             energy = atoms.get_potential_energy()

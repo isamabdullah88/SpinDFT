@@ -42,11 +42,16 @@ INPUT_SCF ={
 
 KPTS = (8, 8, 1)
 
-WAN_KPTS = (36, 36, 1)
+TB2J_KPTS = (36, 36, 1)
 
 if RELAX:
     INPUT_SCF["control"]["calculation"] = "relax"
-    KPTS = (4, 4, 1)
+    
+    INPUT_SCF["ions"] = {
+        "ion_dynamics": "bfgs"
+    }
+    
+    KPTS = (6, 6, 1)
 
 if VCRELAX:
     INPUT_SCF["control"]["calculation"] = "vc-relax"

@@ -7,11 +7,10 @@ class ShellExecutor:
     """Handles the execution of shell commands, environment injection, and MPI parsing.
        Silently logs all standard output to a file instead of dumping to the console.
     """
-    def __init__(self, wkdir, prefix):
+    def __init__(self, wkdir, logprefix):
         self.wkdir = wkdir
-        self.prefix = prefix
 
-        self.logprefix = f"[ShellExecutor] -> [{self.prefix}]"
+        self.logprefix = f"{logprefix} -> [ShellExecutor]"
         self.logger = logging.getLogger("SpinDFT")
 
     def runcmd(self, command, serial=False, env=None):
@@ -23,19 +22,17 @@ class ShellExecutor:
         
         self.logger.info(f"{self.logprefix} Executing: {command} (Output redirected to log)")
         
-        run_env = os.environ.copy()
+        runenv = os.environ.copy()
         if env: 
-            run_env.update(env)
+            runenv.update(env)
             
         try:
             result = subprocess.run(
                 command, shell=True, cwd=self.wkdir,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                text=True, check=True, env=run_env
+                text=True, check=True, env=runenv
             )
             
-            # --- THE FIX: Append the output to a log file instead of printing ---
-            # with open(self.log_file, 'a') as log:
             self.logger.debug(f"{'='*50}\n")
             self.logger.debug(f"COMMAND: {command}")
             self.logger.debug(f"{'='*50}\n")
