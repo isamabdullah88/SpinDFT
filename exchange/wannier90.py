@@ -1,32 +1,63 @@
 import os
-import re
 import logging
 
-from .shell import ShellExecutor
-from .TB2J import TB2JExchange
+from config import ShellExecutor
+from .fermi import FermiParser
 
 class WannierFileManager:
     """Manages the generation of input files and post-processing fixes for Wannier90."""
-    def __init__(self, wkdir, prefix, kmesh, soc, nbnds):
+    def __init__(self, wkdir, prefix, kmesh, soc, nscf_nbnds, wannier_nbnds):
         self.wkdir = wkdir
         self.prefix = prefix
         self.kmesh = kmesh
         self.soc = soc
-        self.nbnds = nbnds
+        self.nscf_nbnds = nscf_nbnds
+        self.wannier_nbnds = wannier_nbnds
+
+        self.qeparser = FermiParser(wkdir, prefix)
+        self.logprefix = "[WannierFileManager]"
+        self.logger = logging.getLogger("SpinDFT")
 
     def write_win(self, atoms, seedname):
         nwann = 56 if self.soc else 28
+
+        efermi = self.qeparser.efermi()
+        dis_froz_min = float(efermi) - 9.0
+        dis_froz_max = float(efermi) + 2.0
+        dis_win_max  = float(efermi) + 10.0
         
         win_content = (
-            f"num_bands = {self.nbnds}\n"
+            f"num_bands = {self.nscf_nbnds}\n"
             f"num_wann = {nwann}\n"
+            "\n"
+            "! --- DISENTANGLEMENT ENERGY WINDOWS ---\n"
+            f"dis_froz_min = {dis_froz_min:.4f}\n"
+            f"dis_froz_max = {dis_froz_max:.4f}\n"
+            f"dis_win_max = {dis_win_max:.4f}\n"
+            "dis_num_iter = 200\n"  # MUST BE TURNED ON! (Default was 0)
+            "dis_mix_ratio = 0.5\n" # Helps stabilize the math
+            "\n"
+            "! --- SPREAD MINIMIZATION ---\n"
+            "num_iter = 200\n"      # Now we actually minimize the Wannier functions
             "write_hr = .true.\n"    
             "write_xyz = .true.\n"   
             "use_ws_distance = .true.\n" 
-            "dis_num_iter = 0\n"     
-            "num_iter = 0\n"         
-            "iprint = 2\n"
+            "iprint = 2\n\n"
         )
+        
+        # 3. Tell Wannier90 to ignore the garbage bands
+        # if self.nscf_nbnds > self.wannier_nbnds:
+        #     win_content += f"exclude_bands = {self.wannier_nbnds + 1}-{self.nscf_nbnds}\n"
+
+        # win_content += (
+        #     "write_hr = .true.\n"    
+        #     "write_xyz = .true.\n"   
+        #     "use_ws_distance = .true.\n" 
+        #     "dis_num_iter = 0\n"     
+        #     "num_iter = 0\n"         
+        #     "iprint = 2\n"
+        # )
+
         if self.soc: win_content += "spinors = .true.\n"
         
         win_content += "\nbegin projections\nCr:d\nI:p\nend projections\n\n"
@@ -92,32 +123,7 @@ class WannierFileManager:
 
         with open(xyz_file, 'w') as f:
             f.writelines(new_lines)
-        print(f"[{self.prefix}] Automatically corrected kz=1 Z-shift bug in {seedname}_centres.xyz")
-
-
-class QEOutputParser:
-    """Parses Quantum ESPRESSO output files to extract physics properties."""
-    def __init__(self, wkdir, prefix):
-        self.wkdir = wkdir
-        self.prefix = prefix
-
-    def get_fermi_energy(self):
-        nscf_out = os.path.join(self.wkdir, f"{self.prefix}_nscf.pwo")
-        scf_out = os.path.join(self.wkdir, f"{self.prefix}_scf.pwo")
-        outfile = nscf_out if os.path.exists(nscf_out) else scf_out
-        
-        if os.path.exists(outfile):
-            with open(outfile, 'r') as f:
-                content = f.read()
-                patterns = [
-                    r'[Tt]he Fermi energy is\s+([-+.\d]+)\s+ev',
-                    r'Fermi energy\s+is\s+([-+.\d]+)\s+ev',
-                    r'Highest occupied, lowest unoccupied level \(ev\):\s+([-+.\d]+)',
-                    r'Highest occupied level \(ev\):\s+([-+.\d]+)'
-                ]
-                for match in (re.search(p, content, re.IGNORECASE) for p in patterns):
-                    if match: return match.group(1)
-        return "0.0"
+        self.logger.info(f"{self.logprefix} Automatically corrected kz=1 Z-shift bug in {seedname}_centres.xyz")
 
 
 
@@ -128,28 +134,31 @@ class Wannier90:
     Main orchestrator for the Wannier90 to TB2J pipeline.
     Coordinates the file manager, executor, parser, and TB2J runner.
     """
-    def __init__(self, wkdir, kmesh=(2, 2, 1), soc=False, nbnds=None):
+    def __init__(self, wkdir, kmesh, soc, nscf_nbnds, wannier_nbnds):
         self.wkdir = wkdir
         self.prefix = 'pwscf'
         self.kmesh = kmesh
         self.soc = soc
-        self.nbnds = nbnds
+        self.nscf_nbnds = nscf_nbnds
+        self.wannier_nbnds = wannier_nbnds
         
         # Initialize Sub-Components
-        self.executor = ShellExecutor(self.wkdir, self.prefix)
-        self.file_manager = WannierFileManager(self.wkdir, self.prefix, self.kmesh, self.soc, self.nbnds)
-        self.qe_parser = QEOutputParser(self.wkdir, self.prefix)
-        self.tb2j = TB2JExchange(self.wkdir, self.prefix, self.kmesh, self.soc, self.executor)
+        self.executor = ShellExecutor(self.wkdir, "[Wannier90]")
+        self.file_manager = WannierFileManager(self.wkdir, self.prefix, self.kmesh, self.soc,
+                                               self.nscf_nbnds, self.wannier_nbnds)
+        # self.qe_parser = FermiParser(self.wkdir, self.prefix)
+        # self.tb2j = TB2JExchange(self.wkdir, self.prefix, self.kmesh, self.soc, self.executor)
 
         self.logprefix = "[Wannier90]"
         self.logger = logging.getLogger("SpinDFT")
 
     def run(self, atoms, numcores):
+        self.logger.info(f"{self.logprefix} Starting Wannier90 pipeline in {self.wkdir}...")
         seednames, spins = ([self.prefix], ['none']) if self.soc else ([f"{self.prefix}_up", f"{self.prefix}_down"], ['up', 'down'])
         self.logger.info(f"{self.logprefix} Starting Wannier90 extraction for components: {spins} with {numcores} cores.")
 
         for seed, spin in zip(seednames, spins):
-            self.logger.info(f"\n--- Processing Spin Component: {spin.upper()} ---")
+            self.logger.info(f"{self.logprefix} --- Processing Spin Component: {spin.upper()} ---")
             
             # Step 1: Pre-processing
             self.file_manager.write_win(atoms, seedname=seed)
@@ -160,12 +169,12 @@ class Wannier90:
             self.executor.runcmd(f"mpirun -np {numcores} pw2wannier90.x -npool 4 -ndiag 4 < {seed}.pw2wan", serial=False)
 
             # Step 3: Wannierization & Bug Fix
-            werr_file = os.path.join(self.wkdir, f"{seed}.werr")
-            if os.path.exists(werr_file): os.remove(werr_file)
+            # werr_file = os.path.join(self.wkdir, f"{seed}.werr")
+            # if os.path.exists(werr_file): os.remove(werr_file)
             
             self.executor.runcmd(f"wannier90.x {seed}", serial=True)
             self.file_manager.fix_wannier_centers(seed)
 
-        # Step 4: Calculate Exchange Interactions
-        efermi = self.qe_parser.get_fermi_energy()
-        return self.tb2j.calculate(efermi)
+        # # Step 4: Calculate Exchange Interactions
+        # efermi = self.qe_parser.efermi()
+        # return self.tb2j.calculate(efermi)
