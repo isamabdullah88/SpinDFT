@@ -1,6 +1,8 @@
 import os
 
 PHASE = 'FM'
+STRAIN_TYPE = 'Shear_XY'
+
 RELAX = False
 VCRELAX = False
 SOC = False
@@ -40,7 +42,7 @@ INPUT_SCF ={
     }
 }
 
-KPTS = (8, 8, 1)
+KPTS = (10, 10, 1)
 
 TB2J_KPTS = (36, 36, 1)
 
