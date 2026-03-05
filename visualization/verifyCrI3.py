@@ -89,13 +89,13 @@ def sanitycheck(dbpath, plot=True):
 
 if __name__ == "__main__":
     import os
-    dbpathFM = './DataSets/HPC/Kpts-10x10/FM/Kpts-10x10-FM.db'
-    dbpathAFM = 'DataSets/HPC/Kpts-10x10/AFM/Kpts-10x10-AFM.db'
+    dbpathFM = './DataSets/HPC/Kpts-10x10-Biaxial/FM/Kpts-10x10-Biaxial-FM.db'
+    dbpathAFM = './DataSets/HPC/Kpts-10x10-Biaxial/AFM/Kpts-10x10-Biaxial-AFM.db'
     print("BD exists:", os.path.exists(dbpathFM))
     print("BD exists:", os.path.exists(dbpathAFM))
 
-    strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=False)
-    strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=False)
+    strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=True)
+    strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=True)
 
     plt.figure(figsize=(10, 5))
 
