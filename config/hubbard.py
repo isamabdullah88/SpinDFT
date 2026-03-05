@@ -220,19 +220,20 @@ if __name__ == "__main__":
 
     atoms = CrI3().batoms
 
-    wkdir = "./DataSets/HPC/Kpts-10x10/FM"
-    dbpath = os.path.join(wkdir, "Kpts-10x10-FM.db")
+    wkdir = "./DataSets/HPC/Kpts-10x10-Biaxial/AFM"
+    dbpath = os.path.join(wkdir, "Kpts-10x10-Biaxial-AFM.db")
 
-    strains = np.linspace(-0.15, 0.15, 21)
-    stntype = 'Uniaxial_X'
+    strains = np.linspace(-0.12, 0.12, 21)
+    stntype = 'Biaxial'
     with connect(dbpath) as db:
         for i, strain in enumerate(strains):
             print(f'Writing to db: {i} of {len(strains)}')
-            pwopath = os.path.join(wkdir, f"Strain_Uniaxial_X_{strain:.4f}", "espresso.pwo")
+            pwopath = os.path.join(wkdir, f"Strain_{stntype}_{strain:.4f}", "espresso.pwo")
 
             if not os.path.exists(pwopath):
-                print(f"Output file not found for strain {strain:.4f}. Skipping...")
+                print(f"Output file not found for strain {strain:.4f} at {pwopath}. Skipping...")
                 continue
+
             atoms = hubbardcalc.parse(pwopath, atoms)
 
             energy = atoms.get_potential_energy()
