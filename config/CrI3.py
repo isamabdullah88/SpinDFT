@@ -60,20 +60,11 @@ class CrI3:
     def strain_atoms(self, stntype, stnvalue):
         """
         Returns the Atoms object for a specific strain type and value.
-        
-        Workflow:
-        1. Checks if a relaxed structure file exists in `prerelaxed_dir` for this strain.
-        2. If YES: Loads and returns it.
-        3. If NO: Takes the batoms, applies the strain mathematically to the cell, 
-           and keeps the fractional coordinates identical.
         """
-        # stntype = stntype.lower()
-        if stntype not in ['Biaxial', 'Uniaxial_X']:
-            raise ValueError("stntype must be either 'Biaxial' or 'Uniaxial_X'.")
+        if stntype not in ['Biaxial', 'Uniaxial_X', 'Shear_XY']:
+            raise ValueError("stntype must be either 'Biaxial', 'Uniaxial_X', or 'Shear_XY'.")
 
-        # 1. Check for the pre-relaxed file
         if self.prerelaxed_dir is not None:
-            # File format expects: CrI3_Biaxial_0.020.json
             filename = f"Strain_{stntype}_{stnvalue:.4f}.json"
             filepath = os.path.join(self.prerelaxed_dir, PHASE, filename)
             
@@ -83,10 +74,9 @@ class CrI3:
             else:
                 self.logger.info(f"{self.logprefix} No pre-relaxed file found at {filepath}. Generating mathematically...")
 
-        # 2. Fallback: Generate unrelaxed strained structure mathematically
+        # Generate unrelaxed strained structure mathematically
         self.logger.info(f"{self.logprefix} Applying {stnvalue} {stntype} strain to base structure...")
         
-        # Create a copy so we don't mutate the original unstrained baseline
         atoms = self.batoms.copy()
         
         # Get the original cell vectors
@@ -97,13 +87,16 @@ class CrI3:
             # Apply in-plane biaxial strain to both 'a' and 'b' lattice vectors
             cell[0] *= (1.0 + stnvalue)
             cell[1] *= (1.0 + stnvalue)
+        
         elif stntype == 'Uniaxial_X':
             # Apply uniaxial strain to the 'a' lattice vector only
             cell[0] *= (1.0 + stnvalue)
+
+        elif stntype == 'Shear_XY':
+            # Apply shear by adding a component of the second lattice vector to the first
+            cell[0] += cell[1] * stnvalue
         
-        # Apply the new cell to the atoms object.
-        # CRUCIAL TRICK: `scale_atoms=True` tells ASE to recalculate the Cartesian 
-        # coordinates so that the FRACTIONAL coordinates remain exactly the same!
+        # Scale atoms
         atoms.set_cell(cell, scale_atoms=True)
         
         return atoms
@@ -126,3 +119,7 @@ if __name__ == "__main__":
     # Request a 2% UNIAXIAL strain
     uniaxial_atoms = cri3_manager.strain_atoms(stntype="Uniaxial_X", stnvalue=0.02)
     print("\nUniaxial Cell:\n", uniaxial_atoms.get_cell())
+
+    # Request a 2% SHEAR strain
+    shear_atoms = cri3_manager.strain_atoms(stntype="Shear_XY", stnvalue=0.02)
+    print("\nShear Cell:\n", shear_atoms.get_cell())
