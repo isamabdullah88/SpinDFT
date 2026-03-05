@@ -7,6 +7,8 @@ __pycache__/
 DataSets
 Outputs
 SSSP_1.3.0_PBE_efficiency
+logs
+SpinDFTLogs
 
 # C extensions
 *.so
