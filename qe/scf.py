@@ -1,4 +1,4 @@
-from config import CrI3, EspressoHubbard, INPUT_SCF
+from config import CrI3, EspressoHubbard, INPUT_SCF, KPTS
 import os
 import numpy as np
 import logging
@@ -87,6 +87,29 @@ class SCF:
         self.logger.info(f"{self.prefix} Strain {strain:.4f}: SCF SUCCESS - Energy: {energy:.4f} eV, Mag Moments: {moms}")
 
         return result
+    
+
+    # ---------------------------------------------------------------------------------------------
+    def writedb(self, db, res):
+        if res['status'] != 'SUCCESS':
+            self.logger.info(f"Skipping database write for strain {res['strain']:.4f} due to status: {res['status']}")
+            return
+
+        db.write(
+            res['atoms'],
+            key_value_pairs={
+                'strain_value': res['strain'],
+                'dataid': res['id'],
+                'pipeline_status': res['status']
+            },
+            data={
+                'mag_moments': res['mag_moments'],
+                'forces': res['forces'],
+                'stress': res['stress'],
+                'scf_parameters': INPUT_SCF,
+                'kpoints': KPTS
+            }
+        )
         
 
 # ---------------------------------------------------------------------------------------------
