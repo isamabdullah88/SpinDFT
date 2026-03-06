@@ -28,24 +28,27 @@ class WorkspaceManager:
         """Cleans up .hdf5 wavefunction files from the pwscf.save directory."""
         self.logger.info(f"{self.logprefix} Initiating SCF Cleanup for {self.wkdir}...")
         
+        dcount = 0
         if self.pwscfdir and os.path.exists(self.pwscfdir):
             for f in glob(os.path.join(self.pwscfdir, "*.hdf5")):
                 if os.path.basename(f) == "charge-density.hdf5":
                     continue
                 
                 os.remove(f)
+                dcount += 1
 
-            self.logger.info(f"{self.logprefix} Cleaned up HDF5 files in {self.pwscfdir}")
+            self.logger.info(f"{self.logprefix} Cleaned up {dcount} HDF5 files in {self.pwscfdir}")
 
+        dcount = 0
         if self.pwscfdir and os.path.exists(self.pwscfdir):
             for f in glob(os.path.join(self.pwscfdir, "*.dat")):
                 if os.path.basename(f) == "charge-density.dat":
                     continue
                 
                 os.remove(f)
-            
-        self.logger.info(f"{self.logprefix} Cleaned up DAT files in {self.pwscfdir}")
-        self.logger.info(f"{self.logprefix} --- SCF Cleanup Complete ---\n")
+                dcount += 1
+
+        self.logger.info(f"{self.logprefix} Cleaned up {dcount} DAT files in {self.pwscfdir}")
 
     def cleanwannier(self):
         """Cleans up pwscf.save folder and other heavy files."""
