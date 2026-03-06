@@ -18,9 +18,9 @@ class WorkspaceManager:
 
         self.logger = logging.getLogger("SpinDFT")
 
-    def setwkdir(self, strain):
+    def setwkdir(self, strain, stntype):
         """Creates temporary and output directories for a specific strain."""
-        self.wkdir = os.path.join(self.bwkdir, f"Strain_Uniaxial_X_{strain:.4f}")
+        self.wkdir = os.path.join(self.bwkdir, f"Strain_{stntype}_{strain:.4f}")
         self.tmpdir = os.path.join(self.wkdir, "tmp")
         self.pwscfdir = os.path.join(self.tmpdir, "pwscf.save")
 
@@ -37,7 +37,7 @@ class WorkspaceManager:
                 os.remove(f)
                 dcount += 1
 
-            self.logger.info(f"{self.logprefix} Cleaned up {dcount} HDF5 files in {self.pwscfdir}")
+        self.logger.info(f"{self.logprefix} Cleaned up {dcount} HDF5 files in {self.pwscfdir}")
 
         dcount = 0
         if self.pwscfdir and os.path.exists(self.pwscfdir):
