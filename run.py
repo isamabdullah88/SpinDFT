@@ -1,37 +1,16 @@
 import os
 import time
 from ase.db import connect
-from tqdm import tqdm
 from logger import getlogger
 
 from qe import SCF
 from config import prep_strains
-from config import INPUT_SCF, PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, WANNIER_NBNDS
+from config import PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, WANNIER_NBNDS, STRAIN_TYPE
 from exchange import Exchange, WorkspaceManager
 
 log = getlogger("SpinDFT")
 log.info(f"Starting SpinDFT pipeline with phase: {PHASE}, VCRELAX: {VCRELAX}, Relaxation: {RELAX}")
 
-def writedb(db, res):
-    if res['status'] != 'SUCCESS':
-        tqdm.write(f"Skipping database write for strain {res['strain']:.4f} due to status: {res['status']}")
-        return
-
-    db.write(
-        res['atoms'],
-        key_value_pairs={
-            'strain_value': res['strain'],
-            'dataid': res['id'],
-            'pipeline_status': res['status']
-        },
-        data={
-            'mag_moments': res['mag_moments'],
-            'forces': res['forces'],
-            'stress': res['stress'],
-            'scf_parameters': INPUT_SCF,
-            'kpoints': KPTS
-        }
-    )
 
 def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     TOTAL_CORES = os.cpu_count() - 2
@@ -84,7 +63,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     if VCRELAX:
         res = scf.run(None, VCRELAX)
         log.info(f"VC-Relax Run: {res['status']}")
-        writedb(connect(dbpath), res)
+        scf.writedb(connect(dbpath), res)
         return
     
     # Generate strain tasks
@@ -96,12 +75,14 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         for task in tasks:
             strain, stntype = task
 
-            workspace.setwkdir(strain)
+            log.info("\n" + "-"*100)
+            log.info(f"Processing Strain {strain:.4f} ({stntype})")
+            workspace.setwkdir(strain, STRAIN_TYPE)
 
             startt = time.time()
 
             res = scf.run((strain, stntype))
-            writedb(db, res)
+            scf.writedb(db, res)
 
             log.info(f"Strain {strain:.4f} ({stntype}): {res['status']}")
 
@@ -120,6 +101,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
 
             endt = time.time()
             log.info(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
+            log.info("-"*100 + "\n")
 
         log.info(["-"]*100)
         log.info("All calculations completed!")
