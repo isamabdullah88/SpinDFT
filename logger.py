@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 class ColoredFormatter(logging.Formatter):
     """Custom formatter to add colors to terminal output based on log level."""
@@ -56,7 +57,10 @@ def getlogger(name="SpinDFT"):
 
         logdir = "SpinDFTLogs"
         os.makedirs(logdir, exist_ok=True)
-        logfile=f"SpinDFT_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+
+        utcnow = datetime.now(ZoneInfo("UTC"))
+        localdt = utcnow.astimezone("Asia/Karachi")
+        logfile=f"SpinDFT_{localdt.strftime('%Y%m%d_%H%M%S')}.log"
         file = logging.FileHandler(os.path.join(logdir, logfile))
         file.setLevel(logging.DEBUG) 
         file.setFormatter(plain_formatter) # Keep the file clean!

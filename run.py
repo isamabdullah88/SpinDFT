@@ -103,9 +103,9 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
             log.info(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
             log.info("-"*100 + "\n")
 
-        log.info(["-"]*100)
+        log.info("-"*100)
         log.info("All calculations completed!")
-        log.info(["-"]*100)
+        log.info("-"*100)
 
 if __name__ == "__main__":
     import argparse
