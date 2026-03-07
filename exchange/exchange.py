@@ -6,17 +6,16 @@ from .workspace import WorkspaceManager
 from .wannier90 import Wannier90
 from .TB2J import TB2JExchange
 from qe import NSCF
-from config import KPTS, TB2J_KPTS, INPUT_SCF, NSCF_NBNDS, WANNIER_NBNDS, PHASE
+from config import KPTS, TB2J_KPTS, INPUT_SCF, NSCF_NBNDS, PHASE
 
 
 class Exchange:
     """Executes the NSCF and Wannier/TB2J steps for a single configuration."""
-    def __init__(self, kpts, soc, numcores, nscf_nbnds, wannier_nbnds):
+    def __init__(self, kpts, soc, numcores, nscf_nbnds):
         self.kpts = kpts
         self.soc = soc
         self.numcores = numcores
         self.nscf_nbnds = nscf_nbnds
-        self.wannier_nbnds = wannier_nbnds
 
         self.logger = logging.getLogger("SpinDFT")
 
@@ -41,8 +40,7 @@ class Exchange:
             wkdir=wkdir,
             kmesh=KPTS,
             soc=self.soc, 
-            nscf_nbnds=self.nscf_nbnds,
-            wannier_nbnds=self.wannier_nbnds
+            nscf_nbnds=self.nscf_nbnds
         )
         wannier.run(atoms, self.numcores)
 

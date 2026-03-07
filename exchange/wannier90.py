@@ -6,20 +6,19 @@ from .fermi import FermiParser
 
 class WannierFileManager:
     """Manages the generation of input files and post-processing fixes for Wannier90."""
-    def __init__(self, wkdir, prefix, kmesh, soc, nscf_nbnds, wannier_nbnds):
+    def __init__(self, wkdir, prefix, kmesh, soc, nscf_nbnds):
         self.wkdir = wkdir
         self.prefix = prefix
         self.kmesh = kmesh
         self.soc = soc
         self.nscf_nbnds = nscf_nbnds
-        self.wannier_nbnds = wannier_nbnds
 
         self.qeparser = FermiParser(wkdir, prefix)
         self.logprefix = "[WannierFileManager]"
         self.logger = logging.getLogger("SpinDFT")
 
     def write_win(self, atoms, seedname):
-        nwann = 56 if self.soc else 28
+        NWANN = 56 if self.soc else 28
 
         efermi = self.qeparser.efermi()
         dis_froz_min = float(efermi) - 9.0
@@ -28,7 +27,7 @@ class WannierFileManager:
         
         win_content = (
             f"num_bands = {self.nscf_nbnds}\n"
-            f"num_wann = {nwann}\n"
+            f"num_wann = {NWANN}\n"
             "\n"
             "! --- DISENTANGLEMENT ENERGY WINDOWS ---\n"
             f"dis_froz_min = {dis_froz_min:.4f}\n"
@@ -44,19 +43,6 @@ class WannierFileManager:
             "use_ws_distance = .true.\n" 
             "iprint = 2\n\n"
         )
-        
-        # 3. Tell Wannier90 to ignore the garbage bands
-        # if self.nscf_nbnds > self.wannier_nbnds:
-        #     win_content += f"exclude_bands = {self.wannier_nbnds + 1}-{self.nscf_nbnds}\n"
-
-        # win_content += (
-        #     "write_hr = .true.\n"    
-        #     "write_xyz = .true.\n"   
-        #     "use_ws_distance = .true.\n" 
-        #     "dis_num_iter = 0\n"     
-        #     "num_iter = 0\n"         
-        #     "iprint = 2\n"
-        # )
 
         if self.soc: win_content += "spinors = .true.\n"
         
@@ -134,20 +120,17 @@ class Wannier90:
     Main orchestrator for the Wannier90 to TB2J pipeline.
     Coordinates the file manager, executor, parser, and TB2J runner.
     """
-    def __init__(self, wkdir, kmesh, soc, nscf_nbnds, wannier_nbnds):
+    def __init__(self, wkdir, kmesh, soc, nscf_nbnds):
         self.wkdir = wkdir
         self.prefix = 'pwscf'
         self.kmesh = kmesh
         self.soc = soc
         self.nscf_nbnds = nscf_nbnds
-        self.wannier_nbnds = wannier_nbnds
-        
+                
         # Initialize Sub-Components
         self.executor = ShellExecutor(self.wkdir, "[Wannier90]")
         self.file_manager = WannierFileManager(self.wkdir, self.prefix, self.kmesh, self.soc,
-                                               self.nscf_nbnds, self.wannier_nbnds)
-        # self.qe_parser = FermiParser(self.wkdir, self.prefix)
-        # self.tb2j = TB2JExchange(self.wkdir, self.prefix, self.kmesh, self.soc, self.executor)
+                                               self.nscf_nbnds)
 
         self.logprefix = "[Wannier90]"
         self.logger = logging.getLogger("SpinDFT")

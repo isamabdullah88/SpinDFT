@@ -5,7 +5,7 @@ from logger import getlogger
 
 from qe import SCF
 from config import prep_strains
-from config import PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, WANNIER_NBNDS, STRAIN_TYPE
+from config import PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, STRAIN_TYPE
 from exchange import Exchange, WorkspaceManager
 
 log = getlogger("SpinDFT")
@@ -92,8 +92,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
                 kpts=KPTS, 
                 soc=SOC, 
                 numcores=CORES_PER_JOB,
-                nscf_nbnds=NSCF_NBNDS,
-                wannier_nbnds=WANNIER_NBNDS
+                nscf_nbnds=NSCF_NBNDS
             )
             exchangepl.run(res['atoms'], workspace.tmpdir)
 
