@@ -59,7 +59,7 @@ def getlogger(name="SpinDFT"):
         os.makedirs(logdir, exist_ok=True)
 
         utcnow = datetime.now(ZoneInfo("UTC"))
-        localdt = utcnow.astimezone("Asia/Karachi")
+        localdt = utcnow.astimezone(ZoneInfo("Asia/Karachi"))
         logfile=f"SpinDFT_{localdt.strftime('%Y%m%d_%H%M%S')}.log"
         file = logging.FileHandler(os.path.join(logdir, logfile))
         file.setLevel(logging.DEBUG) 
