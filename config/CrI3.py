@@ -82,22 +82,42 @@ class CrI3:
         # Get the original cell vectors
         cell = atoms.get_cell()
         
-        # Apply strain
+        # 3x3 Deformation Tensor for each strain
         if stntype == 'Biaxial':
-            # Apply in-plane biaxial strain to both 'a' and 'b' lattice vectors
-            cell[0] *= (1.0 + stnvalue)
-            cell[1] *= (1.0 + stnvalue)
+            # Uniform expansion in X and Y
+            straints = np.array([
+                [1.0 + stnvalue, 0.0,            0.0],
+                [0.0,            1.0 + stnvalue, 0.0],
+                [0.0,            0.0,            1.0]
+            ])
         
         elif stntype == 'Uniaxial_X':
-            # Apply uniaxial strain to the 'a' lattice vector only
-            cell[0] *= (1.0 + stnvalue)
+            # Stretch ONLY the X-axis for the entire crystal
+            straints = np.array([
+                [1.0 + stnvalue, 0.0, 0.0],
+                [0.0,            1.0, 0.0],
+                [0.0,            0.0, 1.0]
+            ])
 
         elif stntype == 'Shear_XY':
-            # Apply shear by adding a component of the second lattice vector to the first
-            cell[0] += cell[1] * stnvalue
+            # Simple Shear: Skew parallel to the X-axis (y-coordinates determine x-shift)
+            # This PERFECTLY conserves the unit cell area/volume!
+            straints = np.array([
+                [1.0,      stnvalue, 0.0],
+                [stnvalue, 1.0,      0.0],
+                [0.0,      0.0,      1.0]
+            ])
         
-        # Scale atoms
-        atoms.set_cell(cell, scale_atoms=True)
+        else:
+            self.logger.error(f"{self.logprefix} Invalid strain type: {stntype}. No changes applied.")
+            return atoms
+            
+        # 2. Apply the tensor via Matrix Multiplication
+        # This safely applies the math to every vector component simultaneously
+        ncell = np.dot(cell, straints.T)
+        
+        # 3. Scale the internal atomic fractional coordinates to the new cell
+        atoms.set_cell(ncell, scale_atoms=True)
         
         return atoms
 
