@@ -216,15 +216,15 @@ class EspressoHubbard:
 if __name__ == "__main__":
     from ase.db import connect
     from .CrI3 import CrI3
-    hubbardcalc = EspressoHubbard(phase='FM')
 
-    atoms = CrI3().batoms
+    phase = 'FM'
+    stntype = 'Shear_XY'
+    wkdir = f"./DataSets/HPC/Kpts-10x10-{stntype}/{phase}"
+    dbpath = os.path.join(wkdir, f"Kpts-10x10-{stntype}-{phase}.db")
 
-    wkdir = "./DataSets/HPC/Kpts-10x10-Biaxial/AFM"
-    dbpath = os.path.join(wkdir, "Kpts-10x10-Biaxial-AFM.db")
-
-    strains = np.linspace(-0.12, 0.12, 21)
-    stntype = 'Biaxial'
+    strains = np.linspace(-0.15, 0.15, 21)
+    
+    hubbardcalc = EspressoHubbard(phase=phase)
     with connect(dbpath) as db:
         for i, strain in enumerate(strains):
             print(f'Writing to db: {i} of {len(strains)}')
@@ -234,12 +234,16 @@ if __name__ == "__main__":
                 print(f"Output file not found for strain {strain:.4f} at {pwopath}. Skipping...")
                 continue
 
-            atoms = hubbardcalc.parse(pwopath, atoms)
 
-            energy = atoms.get_potential_energy()
-            moms = atoms.get_magnetic_moments()
-            forces = atoms.get_forces()
-            stress = atoms.get_stress()
+            crI3 = CrI3()
+            atoms = crI3.strain_atoms(stntype=stntype, stnvalue=strain)
+
+            atomsout = hubbardcalc.parse(pwopath, atoms)
+
+            energy = atomsout.get_potential_energy()
+            moms = atomsout.get_magnetic_moments()
+            forces = atomsout.get_forces()
+            stress = atomsout.get_stress()
 
             result = {
                 'strain': strain,
@@ -249,7 +253,7 @@ if __name__ == "__main__":
                 'mag_moments': moms,
                 'forces': forces,
                 'stress': stress,
-                'atoms': atoms
+                'atoms': atomsout
             }
 
             db.write(
