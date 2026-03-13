@@ -20,6 +20,20 @@ def plot_vampire_output(filepath='output'):
     # Average the two sublattices to get the total system magnetization
     M_total = (M_Cr1 + M_Cr2) / 2.0
 
+    # ==========================================
+    # AUTOMATED Tc DETECTION (The Physics Way)
+    # ==========================================
+    # Calculate the derivative of Magnetization w.r.t Temperature (dM/dT)
+    dM_dT = np.gradient(M_total, T)
+    
+    # Tc is the point of steepest drop (the minimum of the derivative)
+    tc_index = np.argmin(dM_dT)
+    Tc_calc = T[tc_index]
+    M_at_Tc = M_total[tc_index]
+    
+    print(f"-> Automatically detected Tc ≈ {Tc_calc:.2f} K")
+    # ==========================================
+
     # Set up a beautiful, publication-quality plot
     plt.figure(figsize=(9, 6))
     
@@ -27,12 +41,13 @@ def plot_vampire_output(filepath='output'):
     plt.plot(T, M_total, marker='o', color='#1f77b4', linestyle='-', 
              linewidth=2.5, markersize=8, label='Total Magnetization')
     
-    # Optional: Plot the individual sublattices as faint dashed lines to prove they overlap
+    # Optional: Plot the individual sublattices as faint dashed lines
     plt.plot(T, M_Cr1, marker='', color='red', linestyle='--', alpha=0.4, label='Cr1 Sublattice')
     plt.plot(T, M_Cr2, marker='', color='green', linestyle=':', alpha=0.4, label='Cr2 Sublattice')
 
     # Formatting the plot
-    plt.title('Monte Carlo Phase Transition (CrI$_3$ at -1% Strain)', fontsize=16, fontweight='bold', pad=15)
+    plt.title(f'Monte Carlo Phase Transition (CrI$_3$)\nCalculated $T_c$ = {Tc_calc:.1f} K', 
+              fontsize=16, fontweight='bold', pad=15)
     plt.xlabel('Temperature (K)', fontsize=14)
     plt.ylabel('Normalized Magnetization $\\langle |M| \\rangle$', fontsize=14)
     
@@ -44,11 +59,17 @@ def plot_vampire_output(filepath='output'):
     
     plt.legend(fontsize=12, loc='upper right')
     
-    # Add a text annotation pointing out the approximate Tc
-    plt.annotate(f'Approx $T_c$ ≈ 65 K', 
-                 xy=(65, 0.18), xytext=(75, 0.4),
+    # Dynamically place the annotation pointing exactly to the inflection point
+    # We offset the text dynamically so it doesn't run off the screen
+    text_x = Tc_calc + (max(T) * 0.1)  # Shift right by 10% of max T
+    text_y = min(M_at_Tc + 0.3, 0.9)   # Shift up, but cap at 0.9 so it stays in plot
+    
+    plt.annotate(f'$T_c$ ≈ {Tc_calc:.1f} K', 
+                 xy=(Tc_calc, M_at_Tc), 
+                 xytext=(text_x, text_y),
                  arrowprops=dict(facecolor='black', shrink=0.05, width=1.5, headwidth=8),
-                 fontsize=12, fontweight='bold')
+                 fontsize=13, fontweight='bold',
+                 bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="gray", alpha=0.8))
 
     plt.tight_layout()
     
@@ -59,5 +80,5 @@ def plot_vampire_output(filepath='output'):
     plt.show()
 
 if __name__ == "__main__":
-    vampirepath = 'DataSets/CrI3-Relax/FM/_strain_uniaxial_x_-0.0100/tmp/TB2J_results/Vampire/output'
+    vampirepath = 'DataSets/HPC/Exchange-Uniaxial_X/FM/Strain_Uniaxial_X_0.0000/tmp/TB2J_results/Vampire/output'
     plot_vampire_output(vampirepath)
