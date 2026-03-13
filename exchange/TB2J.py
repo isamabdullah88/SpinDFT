@@ -22,6 +22,9 @@ class TB2JExchange:
         self.logprefix = "[TB2J]"
         self.logger = logging.getLogger("SpinDFT")
 
+        # Suppress tqdm output from wann2J.py to avoid cluttering logs
+        os.environ["TQDM_DISABLE"] = "1"
+
     def run(self):
 
         # Step 4: Calculate Exchange Interactions
