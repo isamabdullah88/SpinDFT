@@ -129,8 +129,7 @@ if __name__ == "__main__":
     cri3_manager = CrI3(prerelaxed_dir="relaxed_atoms_dir")
     
     # Write the pristine baseline
-    cri3_manager.write_baseline()
-    
+    cri3_manager.write_baseline('Atom/CrI3.cif')
     # Request a 2% BIAXIAL strain
     # If "relaxed_atoms_dir/strain_biaxial_0.020.json" is missing, it scales mathematically
     biaxial_atoms = cri3_manager.strain_atoms(stntype="Biaxial", stnvalue=0.02)
