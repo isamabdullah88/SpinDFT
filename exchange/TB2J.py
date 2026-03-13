@@ -10,12 +10,12 @@ from .fermi import FermiParser
 
 class TB2JExchange:
     """Configures and runs the TB2J exchange calculation."""
-    def __init__(self, wkdir, kmesh, soc):
+    def __init__(self, wkdir, kmesh, soc, numcores):
         self.wkdir = wkdir
-        # self.outdir = outdir
         self.prefix = 'pwscf'
         self.kmesh = kmesh
         self.soc = soc
+        self.numcores = numcores
         self.executor = ShellExecutor(self.wkdir, "[TB2J]")
         self.qe_parser = FermiParser(self.wkdir, self.prefix)
 
@@ -25,9 +25,8 @@ class TB2JExchange:
         # Suppress tqdm output from wann2J.py to avoid cluttering logs
         os.environ["TQDM_DISABLE"] = "1"
 
-    def run(self):
+    def run(self, rcut=20.0):
 
-        # Step 4: Calculate Exchange Interactions
         efermi = self.qe_parser.efermi()
 
         self.logger.info(f"{self.logprefix} TB2J exchange calculation...")
@@ -40,9 +39,9 @@ class TB2JExchange:
         self.logger.info(f"{self.logprefix} Detected Fermi Energy: {efermi} eV")
         
         if self.soc: 
-            cmd = f"{wann2jexe} --posfile {self.prefix}.win --prefix_spinor {self.prefix} --elements Cr --kmesh {kx} {ky} {kz} --spinor --efermi {efermi}"
+            cmd = f"{wann2jexe} --posfile {self.prefix}.win --prefix_spinor {self.prefix} --elements Cr --kmesh {kx} {ky} {kz} --spinor --efermi {efermi} --rcut {rcut} --np {self.numcores}"
         else:
-            cmd = f"{wann2jexe} --posfile {self.prefix}_up.win --prefix_up {self.prefix}_up --prefix_down {self.prefix}_down --elements Cr --kmesh {kx} {ky} {kz} --efermi {efermi}"
+            cmd = f"{wann2jexe} --posfile {self.prefix}_up.win --prefix_up {self.prefix}_up --prefix_down {self.prefix}_down --elements Cr --kmesh {kx} {ky} {kz} --efermi {efermi} --rcut {rcut} --np {self.numcores}"
             
         self.executor.runcmd(cmd)
         

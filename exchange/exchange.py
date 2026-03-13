@@ -48,7 +48,8 @@ class Exchange:
         self.tb2j = TB2JExchange(
             wkdir,
             TB2J_KPTS, 
-            self.soc, 
+            self.soc,
+            self.numcores
         )
         self.tb2j.run()
 
