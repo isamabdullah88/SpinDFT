@@ -20,9 +20,8 @@ class Exchange:
         self.logger = logging.getLogger("SpinDFT")
 
     def run(self, atoms, wkdir):
-        self.logger.info(f"\n{'='*50}")
-        self.logger.info(f"Executing Pipeline for Wkdir: {wkdir}")
-        self.logger.info(f"{'='*50}")
+        self.logger.info(f"[Exchange] {'-'*50}")
+        self.logger.info(f"[Exchange] Executing Pipeline for Wkdir: {wkdir}")
         
         # Step 1: Explicit NSCF Calculation (using buffer bands)
         nscf = NSCF(

@@ -75,7 +75,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         for task in tasks:
             strain, stntype = task
 
-            log.info("\n" + "-"*100)
+            log.info("\n\n" + "="*100)
             log.info(f"Processing Strain {strain:.4f} ({stntype})")
             workspace.setwkdir(strain, STRAIN_TYPE)
 
@@ -100,11 +100,11 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
 
             endt = time.time()
             log.info(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
-            log.info("-"*100 + "\n")
+            log.info("="*100 + "\n\n")
 
-        log.info("-"*100)
-        log.info("All calculations completed!")
-        log.info("-"*100)
+        log.info("\n\n\n\n" + "="*100)
+        log.info("All CALCULATIONS COMPLETED!")
+        log.info("="*100)
 
 if __name__ == "__main__":
     import argparse
