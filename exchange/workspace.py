@@ -58,7 +58,7 @@ class WorkspaceManager:
             shutil.rmtree(self.pwscfdir)
             self.logger.info(f"{self.logprefix} Deleted QE Save Directory: {self.pwscfdir}")
             
-        extensions = ['*.mmn', '*.amn', '*.chk', '*.eig', '*.nnkp', '*wfc*']
+        extensions = ['*.mmn', '*.amn', '*.chk', '*.eig', '*.nnkp', '*wfc*', '*.dat', '*.hdf5']
         dcount = 0
         
         for ext in extensions:
