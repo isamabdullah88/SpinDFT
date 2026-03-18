@@ -46,7 +46,7 @@ if PHASE == 'AFM':
     INPUT_SCF["system"]["tot_magnetization"] = 0.0
     INPUT_SCF["system"]["nosym"] = True # AFM ordering breaks symmetries
 
-KPTS = (2, 2, 1)
+KPTS = (10, 10, 1)
 
 TB2J_KPTS = (36, 36, 1)
 

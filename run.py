@@ -54,7 +54,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     
     # Generate strain tasks
     tasks = prep_strains(count = ncalculations)
-    num_rattle = 2
+    num_rattle = 10
     
     log.info(f"Starting Production Run...")
     
