@@ -13,13 +13,9 @@ log.info(f"Starting SpinDFT pipeline with phase: {PHASE}, VCRELAX: {VCRELAX}, Re
 
 
 def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
-    TOTAL_CORES = os.cpu_count() - 2
+    TOTAL_CORES = os.cpu_count()
 
-    if VCRELAX:
-        CORES_PER_JOB = TOTAL_CORES # Optimal for small unit cells. 
-    else:
-        CORES_PER_JOB = coresperjob # Optimal for small unit cells.
-    NWORKERS = max(1, TOTAL_CORES // CORES_PER_JOB)
+    CORES_PER_JOB = coresperjob
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -40,7 +36,6 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         "==================================================\n"
         " [ Resource Optimization ]\n"
         f"   Total Cores        :  {TOTAL_CORES}\n"
-        f"   Concurrent Jobs    :  {NWORKERS}\n"
         f"   Cores per Job      :  {CORES_PER_JOB}\n"
         "\n"
         " [ Physics Parameters ]\n"
