@@ -4,7 +4,7 @@ PHASE = 'FM'
 STRAIN_TYPE = 'Shear_XY'
 
 RELAX = False
-VCRELAX = False
+VCRELAX = True
 SOC = False
 
 NSCF_NBNDS = 55
@@ -27,7 +27,7 @@ INPUT_SCF ={
         "smearing": "gaussian",
         "degauss": 0.002,
         "nspin": 2,
-        "nosym": True,
+        "nosym": False,
         "starting_magnetization(1)": 3.0,
         "starting_magnetization(2)": [0.0 if PHASE == 'FM' else -3.0],
         "vdw_corr": "grimme-d3"
@@ -40,6 +40,11 @@ INPUT_SCF ={
         "mixing_mode": "local-TF"
     }
 }
+
+
+if PHASE == 'AFM':
+    INPUT_SCF["system"]["tot_magnetization"] = 0.0
+    INPUT_SCF["system"]["nosym"] = True # AFM ordering breaks symmetries
 
 KPTS = (10, 10, 1)
 
@@ -57,6 +62,8 @@ if RELAX:
 if VCRELAX:
     INPUT_SCF["control"]["calculation"] = "vc-relax"
 
+    INPUT_SCF["system"]["nosym"] = False # Allow symmetries for vc-relax
+
     INPUT_SCF["ions"] = {
         "ion_dynamics": "bfgs"
     }
@@ -67,11 +74,7 @@ if VCRELAX:
         "cell_dofree": "2Dxy"
     }
 
-    KPTS = (4, 4, 1)
-
-
-if PHASE == 'AFM':
-    INPUT_SCF["system"]["tot_magnetization"] = 0.0
+    KPTS = (10, 10, 1)
 
 PSEUDOS = {
     "Cr": "cr_pbe_v1.5.uspp.F.UPF",
