@@ -1,10 +1,10 @@
 import os
 
 PHASE = 'FM'
-STRAIN_TYPE = 'Shear_XY'
+STRAIN_TYPE = 'Biaxial'
 
 RELAX = False
-VCRELAX = True
+VCRELAX = False
 SOC = False
 
 NSCF_NBNDS = 55
@@ -46,7 +46,7 @@ if PHASE == 'AFM':
     INPUT_SCF["system"]["tot_magnetization"] = 0.0
     INPUT_SCF["system"]["nosym"] = True # AFM ordering breaks symmetries
 
-KPTS = (10, 10, 1)
+KPTS = (2, 2, 1)
 
 TB2J_KPTS = (36, 36, 1)
 
