@@ -34,7 +34,7 @@ def prep_strains(count=10):
         
     # Shear Strain (Tilt the lattice in the XY plane)
     elif STRAIN_TYPE == 'Shear_XY':
-        for s in np.linspace(-0.1, 0.1, nshr):
+        for s in np.linspace(-0.15, 0.15, nshr):
             task = (s, 'Shear_XY')
             tasks.append(task)
         
