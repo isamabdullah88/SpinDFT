@@ -61,6 +61,11 @@ class CrI3:
         """
         Returns the Atoms object for a specific strain type and value.
         """
+        if stntype == 'VCRelax':
+            # For VC-Relax, we want to start from the pristine structure without any mathematical strain
+            self.logger.info(f"{self.logprefix} VC-Relax requested. Returning pristine structure without applying mathematical strain.")
+            return self.batoms.copy()
+        
         if stntype not in ['Biaxial', 'Uniaxial_X', 'Shear_XY']:
             raise ValueError("stntype must be either 'Biaxial', 'Uniaxial_X', or 'Shear_XY'.")
 
