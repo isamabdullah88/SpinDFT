@@ -5,6 +5,7 @@ import re
 import numpy as np
 from ase.io.espresso import write_espresso_in
 from ase.calculators.singlepoint import SinglePointCalculator
+from logging import getLogger
 
 from .config import INPUT_SCF, PSEUDOS, KPTS
 
@@ -14,11 +15,19 @@ class EspressoHubbard:
         self.phase = phase
         self.cores_per_job = cores_per_job
 
+        self.logprefix = "[EspressoHubbard] "
+        self.logger = getLogger(__name__)
 
+
+    # ---------------------------------------------------------------------------------------------
     def parseatoms(self, content, atoms):
-        # --- 1. GET RELAXED GEOMETRY (CUSTOM PARSER) ---
-        # Bypassing ASE's read_espresso_out completely to avoid the AssertionError
-        relaxed_atoms = atoms.copy()
+        # Parse the atomic positions and cell from the QE input file content. This is necessary 
+        # because the final geometry may differ from the initial structure, and we want to ensure
+        # our dataset reflects the final final state. We look for the last occurrence of 
+        # 'CELL_PARAMETERS' and 'ATOMIC_POSITIONS' to get the final geometry. We also handle 
+        # different units (angstrom, bohr, crystal, alat) that QE might use in its output.
+
+        atomsout = atoms.copy()
         
         try:
             # A. Parse Final Cell (if CELL_PARAMETERS is present in the output)
@@ -42,7 +51,7 @@ class EspressoHubbard:
                     if alat_match:
                         cell *= float(alat_match.group(1)) * 0.529177210903
                 
-                relaxed_atoms.set_cell(cell)
+                atomsout.set_cell(cell)
 
             # B. Parse Final Positions (if ATOMIC_POSITIONS is present)
             pos_idx = content.rfind('ATOMIC_POSITIONS')
@@ -64,36 +73,42 @@ class EspressoHubbard:
                         break # End of atomic block
                         
                 # Only apply if we extracted the correct number of atoms
-                if len(positions) == len(relaxed_atoms):
+                if len(positions) == len(atomsout):
                     positions = np.array(positions)
                     if unit == 'angstrom':
-                        relaxed_atoms.set_positions(positions)
+                        atomsout.set_positions(positions)
                     elif unit == 'bohr':
-                        relaxed_atoms.set_positions(positions * 0.529177210903)
+                        atomsout.set_positions(positions * 0.529177210903)
                     elif unit == 'crystal':
-                        relaxed_atoms.set_scaled_positions(positions)
+                        atomsout.set_scaled_positions(positions)
                     elif unit == 'alat':
                         alat_match = re.search(r'celldm\(1\)=\s*([-.\d]+)', content)
                         if alat_match:
-                            relaxed_atoms.set_positions(positions * float(alat_match.group(1)) * 0.529177210903)
+                            atomsout.set_positions(positions * float(alat_match.group(1)) * 0.529177210903)
                             
         except Exception as e:
-            print(f"Warning: Custom Geometry Parse failed ({e}). Returning unrelaxed structure!")
-            relaxed_atoms = atoms.copy()
+            self.logger.fatal(f"{self.logprefix}Atomic position parsing failed ({e})")
 
-        return relaxed_atoms
+        return atomsout
+
 
     # ---------------------------------------------------------------------------------------------
-    def parse(self, filepath, atoms):
+    def parse(self, pwipath, pwopath, atoms):
 
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(f"Output file not found: {filepath}")
+        if not os.path.exists(pwipath):
+            raise FileNotFoundError(f"Input file not found: {pwipath}")
+
+        if not os.path.exists(pwopath):
+            raise FileNotFoundError(f"Output file not found: {pwopath}")
         
-        with open(filepath, 'r') as f:
+        with open(pwipath, 'r') as f:
             content = f.read()
 
             # Parse geometry
             atomsout = self.parseatoms(content, atoms)
+
+        with open(pwopath, 'r') as f:
+            content = f.read()
 
             # Parse Energy
             e_match = re.search(r'!\s+total energy\s+=\s+([-.\d]+)\s+Ry', content)
@@ -206,16 +221,19 @@ class EspressoHubbard:
             raise RuntimeError(f"QE Failed: {e}")
 
         # Parse Output
-        outpath = os.path.join(directory, outname)
+        pwipath = os.path.join(directory, inname)
+        pwopath = os.path.join(directory, outname)
 
-        atomsout = self.parse(outpath, atoms)
+        atomsout = self.parse(pwipath, pwopath, atoms)
         
         return atomsout
     
 
+# ---------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
 if __name__ == "__main__":
     from ase.db import connect
-    from .CrI3 import CrI3
+    from .crI3 import CrI3
 
     phase = 'FM'
     stntype = 'Shear_XY'
@@ -229,16 +247,17 @@ if __name__ == "__main__":
         for i, strain in enumerate(strains):
             print(f'Writing to db: {i} of {len(strains)}')
             pwopath = os.path.join(wkdir, f"Strain_{stntype}_{strain:.4f}", "espresso.pwo")
+            pwipath = os.path.join(wkdir, f"Strain_{stntype}_{strain:.4f}", "espresso.pwi")
 
-            if not os.path.exists(pwopath):
-                print(f"Output file not found for strain {strain:.4f} at {pwopath}. Skipping...")
+            if (not os.path.exists(pwopath)) or (not os.path.exists(pwipath)):
+                print(f"Input/Output file not found for strain {strain:.4f} at {pwopath}/{pwipath}. Skipping...")
                 continue
 
 
             crI3 = CrI3()
             atoms = crI3.strain_atoms(stntype=stntype, stnvalue=strain)
 
-            atomsout = hubbardcalc.parse(pwopath, atoms)
+            atomsout = hubbardcalc.parse(pwipath, pwopath, atoms)
 
             energy = atomsout.get_potential_energy()
             moms = atomsout.get_magnetic_moments()
