@@ -5,7 +5,7 @@ from logger import getlogger
 
 from qe import SCF
 from config import prep_strains
-from config import PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, STRAIN_TYPE
+from config import PHASE, KPTS, VCRELAX, RELAX, STRAIN_TYPE, NUM_RATTLE, STDEV_RATTLE, STRAIN_RANGE
 from exchange import Exchange, WorkspaceManager
 
 log = getlogger("SpinDFT")
@@ -19,24 +19,21 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
-    # TODO: DO this to prevent cache memeory error after long runs
-    # THE FIX: Disable OpenMPI's buggy "vader" shared memory module
-    # env["OMPI_MCA_btl_vader_single_copy_mechanism"] = "none"
-    
-    # # Optional: Prevent OpenBLAS from spawning too many threads in pure python scripts
-    # if "wann2J.py" in cmd or serial:
-    #     env["OMP_NUM_THREADS"] = "1"
-    #     env["OPENBLAS_NUM_THREADS"] = "1"
-    
     # Format the configuration into a single beautiful text block
     configsummary = (
         "\n"
         "==================================================\n"
         "             PIPELINE CONFIGURATION               \n"
         "==================================================\n"
-        " [ Resource Optimization ]\n"
-        f"   Total Cores        :  {TOTAL_CORES}\n"
+        " [ Job & Resource Allocation ]\n"
+        f"   Total CPU Cores    :  {TOTAL_CORES}\n"
         f"   Cores per Job      :  {CORES_PER_JOB}\n"
+        f"   Target Calculations:  {ncalculations}\n"
+        "\n"
+        " [ Paths & Directories ]\n"
+        f"   Working Directory  :  {wkdir}\n"
+        f"   Database Path      :  {dbpath}\n"
+        f"   Pre-Relaxed Dir    :  {prerelaxed_dir}\n"
         "\n"
         " [ Physics Parameters ]\n"
         f"   Phase              :  {PHASE}\n"
@@ -70,32 +67,38 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         for task in tasks:
             strain, stntype = task
 
-            log.info("\n\n" + "="*100)
-            log.info(f"Processing Strain {strain:.4f} ({stntype})")
-            workspace.setwkdir(strain, STRAIN_TYPE)
+            if strain < -STRAIN_RANGE or strain > STRAIN_RANGE:
+                log.info(f"Skipping extreme strain {strain:.4f} ({stntype})")
+                continue
 
-            startt = time.time()
+            for idx in range(NUM_RATTLE):
 
-            res = scf.run((strain, stntype))
-            scf.writedb(db, res)
+                log.info("\n\n" + "="*100)
+                log.info(f"Processing Strain {strain:.4f} ({stntype}) rattled {idx+1}/{NUM_RATTLE} with stdev {STDEV_RATTLE:.4f}")
+                workspace.setwkdir(strain, STRAIN_TYPE, idx)
 
-            log.info(f"Strain {strain:.4f} ({stntype}): {res['status']}")
+                startt = time.time()
 
-            workspace.cleanscf()
+                res = scf.run((strain, stntype, idx))
+                scf.writedb(db, res)
 
-            exchangepl = Exchange(
-                kpts=KPTS, 
-                soc=SOC, 
-                numcores=CORES_PER_JOB,
-                nscf_nbnds=NSCF_NBNDS
-            )
-            exchangepl.run(res['atoms'], workspace.tmpdir)
+                log.info(f"Strain {strain:.4f} ({stntype}): {res['status']}")
 
-            workspace.cleanwannier()
+                workspace.cleanscf()
 
-            endt = time.time()
-            log.info(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
-            log.info("="*100 + "\n\n")
+                # exchangepl = Exchange(
+                #     kpts=KPTS, 
+                #     soc=SOC, 
+                #     numcores=CORES_PER_JOB,
+                #     nscf_nbnds=NSCF_NBNDS
+                # )
+                # exchangepl.run(res['atoms'], workspace.tmpdir)
+
+                # workspace.cleanwannier()
+
+                endt = time.time()
+                log.info(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
+                log.info("="*100 + "\n\n")
 
         log.info("\n\n\n\n" + "="*100)
         log.info("All CALCULATIONS COMPLETED!")

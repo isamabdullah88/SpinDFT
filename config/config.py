@@ -1,10 +1,10 @@
 import os
 
 PHASE = 'FM'
-STRAIN_TYPE = 'Shear_XY'
+STRAIN_TYPE = 'Biaxial'
 
 RELAX = False
-VCRELAX = True
+VCRELAX = False
 SOC = False
 
 NSCF_NBNDS = 55
@@ -86,3 +86,8 @@ pseudo_dir = "./SSSP_1.3.0_PBE_efficiency/"
 PSEUDO_DIR = os.path.abspath(pseudo_dir)
 
 INPUT_SCF["control"]["pseudo_dir"] = PSEUDO_DIR
+
+
+NUM_RATTLE = 10
+STDEV_RATTLE = 0.04
+STRAIN_RANGE = 0.06

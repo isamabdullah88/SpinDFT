@@ -18,9 +18,9 @@ class WorkspaceManager:
 
         self.logger = logging.getLogger("SpinDFT")
 
-    def setwkdir(self, strain, stntype):
+    def setwkdir(self, strain, stntype, idx=0):
         """Creates temporary and output directories for a specific strain."""
-        self.wkdir = os.path.join(self.bwkdir, f"Strain_{stntype}_{strain:.4f}")
+        self.wkdir = os.path.join(self.bwkdir, f"Strain_{stntype}_{strain:.4f}_{idx}")
         self.tmpdir = os.path.join(self.wkdir, "tmp")
         self.pwscfdir = os.path.join(self.tmpdir, "pwscf.save")
 
