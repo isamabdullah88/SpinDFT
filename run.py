@@ -5,7 +5,7 @@ from logger import getlogger
 
 from qe import SCF
 from config import prep_strains
-from config import PHASE, KPTS, VCRELAX, RELAX, SOC, NSCF_NBNDS, STRAIN_TYPE
+from config import PHASE, KPTS, VCRELAX, RELAX, STRAIN_TYPE, NUM_RATTLE, STDEV_RATTLE, STRAIN_RANGE
 from exchange import Exchange, WorkspaceManager
 
 log = getlogger("SpinDFT")
@@ -25,9 +25,15 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         "==================================================\n"
         "             PIPELINE CONFIGURATION               \n"
         "==================================================\n"
-        " [ Resource Optimization ]\n"
-        f"   Total Cores        :  {TOTAL_CORES}\n"
+        " [ Job & Resource Allocation ]\n"
+        f"   Total CPU Cores    :  {TOTAL_CORES}\n"
         f"   Cores per Job      :  {CORES_PER_JOB}\n"
+        f"   Target Calculations:  {ncalculations}\n"
+        "\n"
+        " [ Paths & Directories ]\n"
+        f"   Working Directory  :  {wkdir}\n"
+        f"   Database Path      :  {dbpath}\n"
+        f"   Pre-Relaxed Dir    :  {prerelaxed_dir}\n"
         "\n"
         " [ Physics Parameters ]\n"
         f"   Phase              :  {PHASE}\n"
@@ -54,7 +60,6 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     
     # Generate strain tasks
     tasks = prep_strains(count = ncalculations)
-    num_rattle = 10
     
     log.info(f"Starting Production Run...")
     
@@ -62,14 +67,14 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         for task in tasks:
             strain, stntype = task
 
-            if strain < -0.05 or strain > 0.05:
+            if strain < -STRAIN_RANGE or strain > STRAIN_RANGE:
                 log.info(f"Skipping extreme strain {strain:.4f} ({stntype})")
                 continue
 
-            for idx in range(num_rattle):
+            for idx in range(NUM_RATTLE):
 
                 log.info("\n\n" + "="*100)
-                log.info(f"Processing Strain {strain:.4f} ({stntype}) rattled {idx+1}/{num_rattle}")
+                log.info(f"Processing Strain {strain:.4f} ({stntype}) rattled {idx+1}/{NUM_RATTLE} with stdev {STDEV_RATTLE:.4f}")
                 workspace.setwkdir(strain, STRAIN_TYPE, idx)
 
                 startt = time.time()
