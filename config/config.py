@@ -58,7 +58,7 @@ if RELAX:
         "ion_dynamics": "bfgs"
     }
     
-    KPTS = (2, 2, 1)
+    KPTS = (6, 6, 1)
 
 if VCRELAX:
     INPUT_SCF["control"]["calculation"] = "vc-relax"
