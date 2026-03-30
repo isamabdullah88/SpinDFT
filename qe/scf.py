@@ -1,4 +1,4 @@
-from config import CrI3, EspressoHubbard, INPUT_SCF, KPTS
+from config import CrI3, EspressoHubbard, INPUT_SCF, KPTS, STDEV_RATTLE
 import os
 import numpy as np
 import logging
@@ -48,7 +48,7 @@ class SCF:
         displacements = np.random.normal(scale=stdev, size=(len(rtatoms), 3))
         
         # Zero out the Z-displacements to preserve the perfect 2D monolayer plane
-        displacements[:, 2] = 0.0
+        # displacements[:, 2] = 0.0 --- IGNORE ---
             
         # Apply the displacements to the absolute Cartesian coordinates
         currpos = rtatoms.get_positions()
@@ -60,19 +60,19 @@ class SCF:
     def run(self, args, vcrelax=False):
 
         if not vcrelax:
-            strain, stntype, idx = args
+            strain, stntype, rattleidx = args
 
             # Apply Strain
             atoms = self.CrI3.strain_atoms(stntype=stntype, stnvalue=strain)
-            atoms = self.rattle_atoms(atoms, stdev=0.02)
+            atoms = self.rattle_atoms(atoms, stdev=STDEV_RATTLE)
         else:
             stntype, strain = 'VCRelax', 0.0
             atoms = self.CrI3.strain_atoms(stntype=stntype, stnvalue=strain)
 
         atoms = self.initmags(atoms)
         
-        self.logger.info(f"{self.prefix} Running SCF for Strain {strain:.4f} ({stntype}) {idx} rattled!")
-        wkdir = os.path.join(self.wkdir, f"Strain_{stntype}_{strain:.4f}_{idx}")
+        self.logger.info(f"{self.prefix} Running SCF for Strain {strain:.4f} ({stntype}) {rattleidx} rattled!")
+        wkdir = os.path.join(self.wkdir, f"Strain_{stntype}_{strain:.4f}_{rattleidx}")
         os.makedirs(wkdir, exist_ok=True)
         
         espressohub = EspressoHubbard(phase=self.phase, cores_per_job=self.cores_per_job)
@@ -86,7 +86,7 @@ class SCF:
         
         result = {
             'strain': strain,
-            'id': f"CrI3_{stntype}_{strain:.4f}_{idx}",
+            'id': f"CrI3_{stntype}_{strain:.4f}_{rattleidx}",
             'status': 'INIT'
         }
 
