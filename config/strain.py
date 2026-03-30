@@ -22,19 +22,19 @@ def prep_strains(count=10):
     
     # Uniaxial Strain (Stretch X, keep Y and Z fixed)
     if STRAIN_TYPE == 'Uniaxial_X':
-        for s in np.linspace(-0.15, 0.15, nuni):
+        for s in np.linspace(-0.10, 0.10, nuni):
             task = (s, 'Uniaxial_X')
             tasks.append(task)
 
     # Isotropic Strain (Uniform expansion/contraction)
     elif STRAIN_TYPE == 'Biaxial':
-        for s in np.linspace(-0.12, 0.12, niso):
+        for s in np.linspace(-0.10, 0.10, niso):
             task = (s, 'Biaxial')
             tasks.append(task)
         
     # Shear Strain (Tilt the lattice in the XY plane)
     elif STRAIN_TYPE == 'Shear_XY':
-        for s in np.linspace(-0.15, 0.15, nshr):
+        for s in np.linspace(-0.10, 0.10, nshr):
             task = (s, 'Shear_XY')
             tasks.append(task)
         
