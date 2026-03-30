@@ -89,8 +89,8 @@ def sanitycheck(dbpath, plot=True):
 
 if __name__ == "__main__":
     import os
-    dbpathFM = './DataSets/HPC/Kpts-10x10-Biaxial/FM/Kpts-10x10-Biaxial-FM.db'
-    dbpathAFM = './DataSets/HPC/Kpts-10x10-Biaxial/AFM/Kpts-10x10-Biaxial-AFM.db'
+    dbpathFM = './DataSets/HPC/Kpts-10x10-Shear_XY/FM/Kpts-10x10-Shear_XY-FM.db'
+    dbpathAFM = './DataSets/HPC/Kpts-10x10-Shear_XY/AFM/Kpts-10x10-Shear_XY-AFM.db'
     print("BD exists:", os.path.exists(dbpathFM))
     print("BD exists:", os.path.exists(dbpathAFM))
 

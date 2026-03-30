@@ -1,12 +1,10 @@
 import numpy as np
 from ase.db import connect
 
-# --- Config ---
-DB_PATH = 'VCRELAX.db'
 
-def extract_detailed_parameters():
+def extract_detailed_parameters(dbpath):
     try:
-        db = connect(DB_PATH)
+        db = connect(dbpath)
         # Select the row with the lowest energy (the final relaxed structure)
         # relaxed_row = min(db.select(), key=lambda x: x.energy)
         relaxed_row = db.get(id=1)
@@ -84,7 +82,9 @@ def extract_detailed_parameters():
     print(f"{'Index':<6} | {'Symbol':<4} | {'X':>10} | {'Y':>10} | {'Z':>10}")
     print("-" * 50)
     for i, (p, s) in enumerate(zip(positions, symbols)):
-        print(f"{i:<6} | {s:<4} | {p[0]:>10.4f} | {p[1]:>10.4f} | {p[2]:>10.4f}")
+        print(f"{i:<6} | {s:<4} | {p[0]:>10.6f} | {p[1]:>10.6f} | {p[2]:>10.6f}")
 
 if __name__ == "__main__":
-    extract_detailed_parameters()
+
+    DB_PATH = './DataSets/HPC/VCRelax/VCRELAX.db'
+    extract_detailed_parameters(DB_PATH)
