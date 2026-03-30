@@ -5,7 +5,7 @@ from logger import getlogger
 
 from qe import SCF
 from config import prep_strains
-from config import PHASE, KPTS, VCRELAX, RELAX, STRAIN_TYPE, NUM_RATTLE, STDEV_RATTLE, STRAIN_RANGE
+from config import PHASE, KPTS, VCRELAX, RELAX, STRAIN_TYPE, NUM_RATTLE, STDEV_RATTLE, STRAIN_RANGE, RATTLE
 from exchange import Exchange, WorkspaceManager
 
 log = getlogger("SpinDFT")
@@ -40,6 +40,13 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         f"   K-Points           :  {KPTS}\n"
         f"   VC-Relax           :  {VCRELAX}\n"
         f"   Relaxation         :  {RELAX}\n"
+        f"   Strain Type        :  {STRAIN_TYPE}\n"
+        "\n"
+        " [ Rattle Parameters ]\n"
+        f"   Rattle             :  {RATTLE}\n"
+        f"   Rattle Iterations  :  {NUM_RATTLE}\n"
+        f"   Rattle Stdev       :  {STDEV_RATTLE}\n"
+        f"   Strain Range       :  ±{STRAIN_RANGE}\n"
         "=================================================="
     )
     
@@ -67,12 +74,11 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         for task in tasks:
             strain, stntype = task
 
-            if strain < -STRAIN_RANGE or strain > STRAIN_RANGE:
+            if RATTLE and (strain < -STRAIN_RANGE or strain > STRAIN_RANGE):
                 log.info(f"Skipping extreme strain {strain:.4f} ({stntype})")
                 continue
 
             for idx in range(NUM_RATTLE):
-
                 log.info("\n\n" + "="*100)
                 log.info(f"Processing Strain {strain:.4f} ({stntype}) rattled {idx+1}/{NUM_RATTLE} with stdev {STDEV_RATTLE:.4f}")
                 workspace.setwkdir(strain, STRAIN_TYPE, idx)

@@ -87,7 +87,7 @@ PSEUDO_DIR = os.path.abspath(pseudo_dir)
 
 INPUT_SCF["control"]["pseudo_dir"] = PSEUDO_DIR
 
-
-NUM_RATTLE = 10
-STDEV_RATTLE = 0.04
+RATTLE = True
+NUM_RATTLE = 10 if RATTLE else 1
+STDEV_RATTLE = 0.04 if RATTLE else 0.0
 STRAIN_RANGE = 0.06
