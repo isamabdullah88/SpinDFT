@@ -3,7 +3,8 @@ import os
 PHASE = 'FM'
 STRAIN_TYPE = 'Biaxial'
 
-RELAX = False
+RATTLE = False
+RELAX = True
 VCRELAX = False
 SOC = False
 
@@ -57,7 +58,7 @@ if RELAX:
         "ion_dynamics": "bfgs"
     }
     
-    KPTS = (6, 6, 1)
+    KPTS = (2, 2, 1)
 
 if VCRELAX:
     INPUT_SCF["control"]["calculation"] = "vc-relax"
@@ -87,7 +88,6 @@ PSEUDO_DIR = os.path.abspath(pseudo_dir)
 
 INPUT_SCF["control"]["pseudo_dir"] = PSEUDO_DIR
 
-RATTLE = True
 NUM_RATTLE = 10 if RATTLE else 1
 STDEV_RATTLE = 0.04 if RATTLE else 0.0
 STRAIN_RANGE = 0.06
