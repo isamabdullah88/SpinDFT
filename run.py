@@ -5,7 +5,7 @@ from logger import getlogger
 
 from qe import SCF
 from config import prep_strains
-from config import PHASE, KPTS, VCRELAX, RELAX, STRAIN_TYPE, NUM_RATTLE, STDEV_RATTLE, STRAIN_RANGE, RATTLE
+from config import PHASE, KPTS, VCRELAX, RELAX, STRAIN_TYPE, NUM_RATTLE, STDEV_RATTLE, STRAIN_RANGE, RATTLE, SOC, NSCF_NBNDS
 from exchange import Exchange, WorkspaceManager
 
 log = getlogger("SpinDFT")
@@ -92,15 +92,15 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
 
                 workspace.cleanscf()
 
-                # exchangepl = Exchange(
-                #     kpts=KPTS, 
-                #     soc=SOC, 
-                #     numcores=CORES_PER_JOB,
-                #     nscf_nbnds=NSCF_NBNDS
-                # )
-                # exchangepl.run(res['atoms'], workspace.tmpdir)
+                exchangepl = Exchange(
+                    kpts=KPTS, 
+                    soc=SOC, 
+                    numcores=CORES_PER_JOB,
+                    nscf_nbnds=NSCF_NBNDS
+                )
+                exchangepl.run(res['atoms'], workspace.tmpdir)
 
-                # workspace.cleanwannier()
+                workspace.cleanwannier()
 
                 endt = time.time()
                 log.info(f"Completed TB2J and Wannier90 pipeline for Strain {strain:.4f} ({stntype}) in {endt - startt:.2f} seconds")
