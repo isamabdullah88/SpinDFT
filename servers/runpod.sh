@@ -33,6 +33,10 @@ echo "Adding QE 7.5 to system PATH..."
 echo "export PATH=\$HOME/q-e-qe-7.5/bin:\$PATH" >> $HOME/.bashrc
 export PATH=$HOME/q-e-qe-7.5/bin:$PATH
 
+export OMP_NUM_THREADS=1
+export OMPI_ALLOW_RUN_AS_ROOT=1
+export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
 # 6. Verify the installation
 echo "======================================"
 echo "Bare-Metal Compilation Complete for v7.5!"
