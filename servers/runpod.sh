@@ -76,6 +76,7 @@ echo "Installing ASE, Numpy, TB2J and dependencies globally..."
 # Using --break-system-packages to allow global installation on modern Ubuntu
 pip3 install --upgrade pip --break-system-packages
 pip3 install numpy ase TB2J six python-dateutil pandas --break-system-packages
+pip3 install --upgrade six python-dateutil pandas --break-system-packages
 
 # 9. Verify the installation
 echo "======================================"
