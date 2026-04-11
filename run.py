@@ -74,7 +74,7 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
         for task in tasks:
             strain, stntype = task
 
-            if RATTLE and (strain < -STRAIN_RANGE or strain > STRAIN_RANGE):
+            if RATTLE and (not (-STRAIN_RANGE < strain < STRAIN_RANGE)):
                 log.info(f"Skipping extreme strain {strain:.4f} ({stntype})")
                 continue
 
