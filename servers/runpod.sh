@@ -2,14 +2,15 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-echo "Starting Ultimate RunPod Setup: QE 7.5 + Wannier90 (Submodule Fix) + TB2J Pipeline..."
+echo "Starting Ultimate RunPod Setup: QE 7.5 + Wannier90 + TB2J Pipeline (Bare-Metal Python)..."
 
 # 1. Update package list and install system dependencies
-echo "Installing compilers, tmux, and high-perf math libraries..."
+echo "Installing compilers, tmux, python3, and high-perf math libraries..."
 apt-get update -y
 apt-get install -y build-essential gfortran wget git tmux htop \
                    libopenmpi-dev openmpi-bin \
-                   libopenblas-dev libfftw3-dev
+                   libopenblas-dev libfftw3-dev \
+                   python3 python3-pip python3-dev
 
 # 2. Set up the local Scratch Directory to prevent Network I/O bottlenecks
 echo "Creating local scratch directory for fast NVMe I/O..."
@@ -24,6 +25,8 @@ rm q-e-qe-7.5.tar.gz
 cd q-e-qe-7.5
 
 # 4. The Wannier90 Git Submodule Fix
+# (Note: If you intend to compile w90, you WILL need to uncomment these lines 
+# otherwise 'make w90' will fail due to the missing repository)
 # echo "Fetching Wannier90 source code to fix the submodule trap..."
 # rm -rf external/wannier90
 # git clone --depth 1 --branch v3.1.0 https://github.com/wannier-developers/wannier90.git external/wannier90
@@ -45,7 +48,7 @@ make pp -j$NUM_CORES
 
 # 7. Add QE to PATH and optimize the Linux Scheduler (OpenMP limiters)
 echo "Writing environment variables to ~/.bashrc..."
-# cat << 'EOF' >> $HOME/.bashrc
+cat << 'EOF' >> $HOME/.bashrc
 
 # Quantum ESPRESSO & Wannier90 Path
 export PATH=$HOME/q-e-qe-7.5/bin:$PATH
@@ -58,40 +61,23 @@ export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
+EOF
 
 # Load the new bashrc immediately for this session
 export PATH=$HOME/q-e-qe-7.5/bin:$PATH
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
-
 export OMPI_ALLOW_RUN_AS_ROOT=1
 export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
-# 8. Install Miniconda for Python dependency management
-echo "Installing Miniconda..."
-cd $HOME
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-bash miniconda.sh -b -p $HOME/miniconda
-rm miniconda.sh
+# 8. Install Python Libraries System-Wide
+echo "Installing ASE, Numpy, TB2J and dependencies globally..."
+# Using --break-system-packages to allow global installation on modern Ubuntu
+pip3 install --upgrade pip --break-system-packages
+pip3 install numpy ase TB2J six python-dateutil pandas --break-system-packages
 
-# Initialize conda for the current shell and bashrc
-source $HOME/miniconda/etc/profile.d/conda.sh
-conda init bash
-
-# 9. Create Python environment and install ASE, Numpy, TB2J
-echo "Setting up Python environment 'materials-env'..."
-conda create -n materials-env python=3.10 -y
-conda activate materials-env
-
-echo "Installing ASE, Numpy, and TB2J via pip..."
-pip install --upgrade pip
-pip install numpy ase TB2J
-
-# Ensure the conda environment activates on login
-echo "conda activate materials-env" >> $HOME/.bashrc
-
-# 10. Verify the installation
+# 9. Verify the installation
 echo "======================================"
 echo "Installation Complete!"
 echo "Testing Executables:"
@@ -101,7 +87,7 @@ which pw2wannier90.x
 echo "Testing MPI setup:"
 mpirun --version
 echo "Testing Python Packages:"
-python -c "import ase, numpy; print(f'ASE version: {ase.__version__} | Numpy version: {numpy.__version__}')"
+python3 -c "import ase, numpy; print(f'ASE version: {ase.__version__} | Numpy version: {numpy.__version__}')"
 TB2J_run --help | head -n 5
 echo "======================================"
 echo "To begin your workflow, run: source ~/.bashrc"
