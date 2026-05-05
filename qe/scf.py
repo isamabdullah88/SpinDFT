@@ -66,7 +66,7 @@ class SCF:
             atoms = self.CrI3.strain_atoms(stntype=stntype, stnvalue=strain)
             atoms = self.rattle_atoms(atoms, stdev=STDEV_RATTLE)
         else:
-            stntype, strain = 'VCRelax', 0.0
+            stntype, strain, rattleidx = 'VCRelax', 0.0, 0
             atoms = self.CrI3.strain_atoms(stntype=stntype, stnvalue=strain)
 
         atoms = self.initmags(atoms)
