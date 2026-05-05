@@ -8,6 +8,7 @@ from ase.io.espresso import write_espresso_in
 from ase.calculators.singlepoint import SinglePointCalculator
 
 from .CrI3 import CrI3
+from config import PSEUDOS
 from logging import getLogger
 
 class EspressoHubbard:
