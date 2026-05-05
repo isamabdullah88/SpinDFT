@@ -231,7 +231,7 @@ class EspressoHubbard:
         if platform.system() == "Darwin":
             cmd = f"mpirun -np {self.cores_per_job} pw.x -in {inname} > {outname}"
         else:
-            cmd = f"mpirun --bind-to core -np {self.cores_per_job} pw.x -in {inname} > {outname}"
+            cmd = f"mpirun -np {self.cores_per_job} pw.x -in {inname} > {outname}"
         
         try:
             subprocess.run(cmd, shell=True, cwd=directory, check=True)

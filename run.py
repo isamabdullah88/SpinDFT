@@ -18,6 +18,8 @@ def run(dbpath, wkdir, prerelaxed_dir, ncalculations=15, coresperjob=6):
     CORES_PER_JOB = coresperjob
 
     os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['OMPI_ALLOW_RUN_AS_ROOT'] = '1'
+    os.environ['OMPI_ALLOW_RUN_AS_ROOT_CONFIRM'] = '1'
 
     # Format the configuration into a single beautiful text block
     configsummary = (
