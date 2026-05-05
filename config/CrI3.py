@@ -7,7 +7,7 @@ from .config import PHASE
 import logging
 
 class CrI3:
-    def __init__(self, a=7.004311, c=19.260000, dz=1.605670, prerelaxed_dir=None):
+    def __init__(self, a=7.004402443, c=19.260000, dz=1.605670, prerelaxed_dir=None):
         """
         Initialize the CrI3 class with the pristine, fully relaxed lattice parameters.
         
@@ -15,6 +15,10 @@ class CrI3:
         :param c: Relaxed out-of-plane lattice parameter (Angstroms)
         :param dz: Relaxed physical thickness (distance Cr to I plane) in Angstroms
         :param prerelaxed_dir: Path to the directory containing pre-relaxed atom files (optional).
+        a = 7.004402443 # Obtained after VC-Relaxation with kpts=(10,10,1) on pristine structure. 
+        This is the most accurate value to date and should be used for all subsequent strained 
+        structures to ensure consistency.
+        a=7.004311 # Obtained after VC-Relaxation with kpts=(6,6,1) on pristine structure.
         """
         self.prerelaxed_dir = prerelaxed_dir
 
@@ -32,20 +36,21 @@ class CrI3:
 
         # Scaled (fractional) positions maintain perfect C3v symmetry 
         # and automatically scale if strain is applied to the cell.
-        scaled_positions = [
-            [0.333333, 0.666667, 0.500000], # Cr 0
-            [0.666667, 0.333333, 0.500000], # Cr 1
-            [0.333333, 0.000000, z_high],   # I 2
-            [0.000000, 0.333333, z_high],   # I 3
-            [0.666667, 0.666667, z_high],   # I 4
-            [0.666667, 0.000000, z_low],    # I 5
-            [0.000000, 0.666667, z_low],    # I 6
-            [0.333333, 0.333333, z_low]     # I 7
+        positions = [
+            [-0.0000035022, 4.0439956579, 9.6300000000],
+            [3.5022047237, 2.0219947959, 9.6300000000],
+            [2.4597095941, 0.0000000000, 11.2358421998],
+            [-1.2298547971, 2.1301709944, 11.2358421998],
+            [2.2723464244, 3.9358194594, 11.2358421998],
+            [4.5446928487, -0.0000000000, 8.0241578002],
+            [-2.2723464244, 3.9358194594, 8.0241578002],
+            [1.2298547971, 2.1301709944, 8.0241578002]
         ]
 
         # ASE automatically converts these to your absolute Cartesian coordinates
         self.batoms = Atoms('Cr2I6', 
-                           scaled_positions=scaled_positions, 
+                        #    scaled_positions=scaled_positions, 
+                           positions=positions,
                            cell=cell, 
                            pbc=[True, True, True])
         
