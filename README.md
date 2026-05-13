@@ -60,12 +60,8 @@ You can safely watch the real-time pipeline execution, including iteration-level
 tail -f SpinDFTLogs/SpinDFT_<date>_<time>.log
 ```
 
---
 
-## License
-This project is open-source and available under the MIT License.
-
---
+---
 
 **Author**: Isam Balghari
 
@@ -73,4 +69,4 @@ This project is open-source and available under the MIT License.
 
 **Degree**: MS Physics
 
-Research Focus: Spintronics, Strain Engineering, and Machine Learning Potentials
+**Research Focus**: Spintronics, Strain Engineering, and Machine Learning Potentials
