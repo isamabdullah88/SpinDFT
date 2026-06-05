@@ -1,6 +1,6 @@
 # SpinDFT: High-Throughput Magnetic Exchange Pipeline for 2D $CrI_3$
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Quantum ESPRESSO](https://img.shields.io/badge/Quantum_ESPRESSO-v7.0+-003366.svg)](https://www.quantum-espresso.org/)
 
