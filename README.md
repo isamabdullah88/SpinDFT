@@ -42,25 +42,28 @@ A custom logger writes clean, high-level progress to the terminal while simultan
 The orchestrator executes the following sequence for every structural configuration in the database:
 
 ```
-Structure (ASE .db)
+1. Variable Relaxation     ←  variable-cell relaxation (6×6×1 k-mesh) [config/CrI3.py]
        │
        ▼
-1. Structural Relaxation   ←  variable-cell or fixed-cell (6×6×1 k-mesh)
+1. Relaxation Per Strain   ←  fixed-cell (10×10×1 k-mesh)
        │
        ▼
-2. SCF Calculation         ←  ground-state charge/spin density, DFT+U (10×10×1)
+2. Rattling                ←  emulate temperature effect
        │
        ▼
-3. NSCF Calculation        ←  empty bands for Wannierization (36×36×1)
+3. SCF Calculation         ←  ground-state charge/spin density, DFT+U (10×10×1)
        │
        ▼
-4. pw2wannier90.x          ←  overlap (M) and projection (A) matrices
+4. NSCF Calculation        ←  empty bands for Wannierization (36×36×1)
        │
        ▼
-5. Wannier90               ←  maximally-localized Cr-d / I-p Wannier functions
+5. pw2wannier90.x          ←  overlap (M) and projection (A) matrices
        │
        ▼
-6. TB2J                    ←  Heisenberg J(r) via magnetic force theorem
+6. Wannier90               ←  maximally-localized Cr-d / I-p Wannier functions
+       │
+       ▼
+7. TB2J                    ←  Heisenberg J(r) via magnetic force theorem
        │
        ▼
    exchange.xml  +  energies  +  forces   →   DSpinGNN training dataset
@@ -68,17 +71,18 @@ Structure (ASE .db)
 
 **Step details:**
 
-1. **Structural Relaxation** — Relaxes the strained cell to the local energy minimum. Variable-cell relaxation is used for the pristine structure; fixed-cell relaxation is applied to strained configurations where the strain is prescribed.
+1. **Variable Structural Relaxation** — Variable-cell relaxation for finding the equlibrium pristince crystal lattice geometry.
+2. **Fixed Structural Relaxation** Relaxes the strained cell to the local energy minimum for each configuration.
 
-2. **SCF** — Converges the ground-state charge and spin density using GGA-PBE with a Hubbard U = 3.0 eV on Cr 3d orbitals (`DFT+U`, Dudarev scheme) and Grimme D3 van der Waals corrections. Produces the reference Fermi energy.
+3. **SCF** — Converges the ground-state charge and spin density using GGA-PBE with a Hubbard U = 3.0 eV on Cr 3d orbitals (`DFT+U`, Dudarev scheme) and Grimme D3 van der Waals corrections. Produces the reference Fermi energy.
 
-3. **NSCF** — Computes a large number of unoccupied bands over a dense k-mesh. Band count is set dynamically from the Fermi level parsed in step 2.
+4. **NSCF** — Computes a large number of unoccupied bands over a dense k-mesh. Band count is set dynamically from the Fermi level parsed in step 3.
 
-4. **pw2wannier90** — Extracts Bloch overlaps and projections onto Cr-d and I-p atomic orbitals.
+5. **pw2wannier90** — Extracts Bloch overlaps and projections onto Cr-d and I-p atomic orbitals.
 
-5. **Wannier90** — Minimizes the spread of the Wannier functions to produce a real-space tight-binding Hamiltonian (`seedname_hr.dat`).
+6. **Wannier90** — Minimizes the spread of the Wannier functions to produce a real-space tight-binding Hamiltonian (`seedname_hr.dat`).
 
-6. **TB2J** — Applies the Liechtenstein magnetic force theorem to the Wannier Hamiltonian on a dense k-mesh (36×36×1) to extract isotropic nearest-neighbour exchange couplings J₁(r) and write `exchange.xml`.
+7. **TB2J** — Applies the Liechtenstein magnetic force theorem to the Wannier Hamiltonian on a dense k-mesh (36×36×1) to extract isotropic nearest-neighbour exchange couplings J₁(r) and write `exchange.xml`.
 
 ---
 
@@ -88,13 +92,14 @@ For each configuration, SpinDFT produces:
 
 | Output | Description |
 |---|---|
-| `exchange.xml` | TB2J exchange coupling file; J₁ (meV) per Cr–Cr bond |
+| `exchange.xml` | TB2J exchange coupling file inside "Tb2j" folder; J (meV) per Cr–Cr bond for first, second, third nearest neighbors based on set parameter |
 | SCF total energy | E (Ry), parsed and stored in the ASE database |
-| Atomic forces | F (Ry/Bohr), parsed from SCF output |
+| Atomic forces | F (Ry/Bohr), parsed from SCF output and stored in the ASE database |
 | Relaxed structure | Updated ASE `.db` entry with relaxed coordinates |
 | `SpinDFT_*.log` | Full run log with convergence metrics and timings |
 
-The complete dataset (345 training + 61 validation + 61 test configurations) is publicly available at the repository linked below.
+The dataset (345 training + 61 validation) is publicly available at the repository linked below.
+https://drive.google.com/file/d/1jqfMFcCTrwAJEileB6kcM1-RLY7SjwwE/view?usp=sharing
 
 ---
 
@@ -106,12 +111,12 @@ The following must be installed and accessible in your HPC `$PATH`:
 |---|---|---|
 | Python | 3.8+ | Orchestration and parsing |
 | ASE | latest | Structure database and I/O |
-| Quantum ESPRESSO | 7.0+ | DFT relaxation, SCF, NSCF |
+| Quantum ESPRESSO | 7.5+ | DFT relaxation, SCF, NSCF |
 | Wannier90 | 3.0+ | Wannier function generation |
 | TB2J | latest | Exchange coupling extraction |
 | SSSP pseudopotentials | Efficiency v1.3.0 | Cr and I pseudopotentials |
 
-Quantum ESPRESSO v7.0 or later is strongly recommended for HDF5 wavefunction support, which reduces I/O overhead on large NSCF calculations.
+Quantum ESPRESSO v7.5 or later is strongly recommended for HDF5 wavefunction support, which reduces I/O overhead on large NSCF calculations.
 
 ---
 
@@ -129,32 +134,38 @@ Ensure your pseudopotential directory (e.g., SSSP Efficiency) is set in the conf
 
 ## Usage
 
-### 1. Prepare Your Structural Database
+### 1. Configure the Environment
 
-Generate or provide an ASE `.db` file containing the initial structural configurations. Strained structures can be generated using the included strain-sampling utility:
+Edit `config.py` to set your pseudopotential path, Magnetic Phase, Strain type, Relaxation, SOC, and convergence parameters:
 
-```bash
-python generate_structures.py --pristine CrI3_pristine.cif --strains biaxial uniaxial shear --range -0.05 0.05 --steps 11
+```
+pseudo_dir = "./SSSP_1.3.0_PBE_efficiency/"
+PHASE = 'FM'
+STRAIN_TYPE = 'Biaxial'
+RELAX = False
+VCRELAX = False
+SOC = False
+NSCF_NBNDS = 55
 ```
 
-### 2. Configure the Environment
+### 2. Prepare Your Relaxed Strained Configurations
 
-Edit `config.yaml` to set your pseudopotential path, HPC scratch directory, MPI executable, and convergence parameters:
+The foremost step is to find the pristine variable relaxed lattice. For that you can VCRelax to True. The second step is to generat the relaxed structures of each strained configuration. Those will be used latter to thermally rattle the atoms from equilibrium positions.
+You can set all the parameters and then run the main entry point.
 
-```yaml
-pseudo_dir: /home/user/pseudopotentials/sssp_efficiency
-scratch_dir: /scratch/user/spindft_runs
-mpi_cmd: mpirun -np 32
-hubbard_u: 3.0   # eV, applied to Cr d-orbitals
+```bash
+python run.py --pristine CrI3_pristine.cif --strains biaxial uniaxial shear --range -0.05 0.05 --steps 11
 ```
 
 ### 3. Run the Orchestrator
 
 ```bash
 python run.py \
-  --dbpath /path/to/structures.db \
-  --wkdir /scratch/user/tmp \
-  --prerelaxed_dir /path/to/scf_runs
+       --WKDIR <Working directory> \
+       --PRERELAXED_DIR <Directory of relaxed structures> \
+       --DBPATH <Database path to write results>  \
+       --N_CALCULATIONS <Number of strained configurations> \
+       --CORES_PER_JOB <Number of physical cores in your CPU>
 ```
 
 ### 4. Monitor Execution
@@ -167,7 +178,7 @@ The terminal shows high-level progress (configuration index, current step, conve
 
 ### 5. Collect Outputs
 
-Completed exchange couplings, energies, and forces are written back into the ASE database and as individual `exchange.xml` files in each configuration's working directory.
+Completed energies, and forces are written into the ASE database and exchange couplings are persist into `exchange.xml` files in `Tb2j` folder for each configuration's working directory.
 
 ---
 
