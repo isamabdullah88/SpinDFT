@@ -154,12 +154,6 @@ The foremost step is to find the pristine variable relaxed lattice. For that you
 You can set all the parameters and then run the main entry point.
 
 ```bash
-python run.py --pristine CrI3_pristine.cif --strains biaxial uniaxial shear --range -0.05 0.05 --steps 11
-```
-
-### 3. Run the Orchestrator
-
-```bash
 python run.py \
        --WKDIR <Working directory> \
        --PRERELAXED_DIR <Directory of relaxed structures> \
@@ -168,7 +162,7 @@ python run.py \
        --CORES_PER_JOB <Number of physical cores in your CPU>
 ```
 
-### 4. Monitor Execution
+### 3. Monitor Execution
 
 ```bash
 tail -f SpinDFTLogs/SpinDFT_<date>_<time>.log
@@ -176,7 +170,7 @@ tail -f SpinDFTLogs/SpinDFT_<date>_<time>.log
 
 The terminal shows high-level progress (configuration index, current step, convergence status). The log file contains the full record including Fermi energies, band counts, Wannier spreads, and any MPI errors.
 
-### 5. Collect Outputs
+### 4. Collect Outputs
 
 Completed energies, and forces are written into the ASE database and exchange couplings are persist into `exchange.xml` files in `Tb2j` folder for each configuration's working directory.
 
