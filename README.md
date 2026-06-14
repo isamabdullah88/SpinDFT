@@ -107,7 +107,7 @@ For each configuration, SpinDFT produces:
 
 The complete dataset (345 training / 61 validation / 61 test configurations) is publicly available:
 
-📁 [Download Dataset (Google Drive)](https://drive.google.com/file/d/1jqfMFcCTrwAJEileB6kcM1-RLY7SjwwE/view?usp=sharing)
+📁 [Download Dataset (Google Drive)](https://drive.google.com/file/d/1cJOLhnRjvSaLbdc3UAEhMgxOMpeDa_G_/view?usp=sharing)
 
 ---
 
