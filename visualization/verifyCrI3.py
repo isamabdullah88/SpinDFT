@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from ase.db import connect
-
+import os
 
 def sanitycheck(dbpath, plot=True):
     strains = []
@@ -14,9 +16,7 @@ def sanitycheck(dbpath, plot=True):
 
     with connect(dbpath) as db:
         for row in db.select():
-            
             s = row['strain_value']
-            
             e = row.energy
             
             if 'mag_moments' in row.data:
@@ -86,29 +86,106 @@ def sanitycheck(dbpath, plot=True):
     return strains, energies, mag_moms_cr, max_forces
 
 
-
 if __name__ == "__main__":
-    import os
-    dbpathFM = './DataSets/HPC/Kpts-10x10-Shear_XY/FM/Kpts-10x10-Shear_XY-FM.db'
-    dbpathAFM = './DataSets/HPC/Kpts-10x10-Shear_XY/AFM/Kpts-10x10-Shear_XY-AFM.db'
-    print("BD exists:", os.path.exists(dbpathFM))
-    print("BD exists:", os.path.exists(dbpathAFM))
+    
+    straintype = 'Uniaxial_X'
+    dbpathFM = f'./DataSets/HPC-Pre_VCRelax/Relaxed-6x6/Relaxed-{straintype}/FM/Relaxed-{straintype}-FM.db'
+    dbpathAFM = f'./DataSets/HPC-Pre_VCRelax/Relaxed-6x6/Relaxed-{straintype}/AFM/Relaxed-{straintype}-AFM.db'
+    
+    print("DB exists:", os.path.exists(dbpathFM))
+    print("DB exists:", os.path.exists(dbpathAFM))
+    print('FM:  ', dbpathFM)
+    print('AFM: ', dbpathAFM)
 
-    strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=True)
-    strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=True)
-
-    plt.figure(figsize=(10, 5))
+    strainFM, energiesFM, _, maxforcesFM = sanitycheck(dbpathFM, plot=False)
+    strainAFM, energiesAFM, _, maxforcesAFM = sanitycheck(dbpathAFM, plot=False)
 
     minFM = np.argmin(energiesFM)
-    minAFM = np.argmin(energiesAFM)
-    print('minFM:', strainFM[minFM], energiesFM[minFM])
-    print('minAFM:', strainAFM[minAFM], energiesAFM[minAFM])
-    plt.plot(strainFM, energiesFM, 'o-', label='FM', c='b')
-    plt.plot(strainAFM, energiesAFM, 's-', label='AFM', c='r')
+    print('minFM absolute:', strainFM[minFM], energiesFM[minFM])
+
+    # Set the minimum energy where strain is zero for each dataset
+    strainFM -= strainFM[minFM]  # Shift FM strains so that min is at 0%
+    strainAFM -= strainAFM[minFM]  # Shift AFM strains similarly
+
+    # Calculate Relative Energy (ΔE) to normalize the Y-axis
+    global_min = min(energiesFM[minFM], energiesAFM[minFM])
+
+    # --- Package Data for Seaborn ---
+    df_fm = pd.DataFrame({
+        f'{straintype} Strain (%)': strainFM * 100,
+        'Relative Energy (eV)': energiesFM - global_min,
+        'Magnetic State': 'Ferromagnetic (FM)'
+    })
     
-    plt.xlabel('Strain Index')
-    plt.ylabel('Total Energy (eV)')
-    plt.title('Energy Comparison: FM vs AFM')
-    plt.legend()
-    plt.grid(True)
+    df_afm = pd.DataFrame({
+        f'{straintype} Strain (%)': strainAFM * 100,
+        'Relative Energy (eV)': energiesAFM - global_min,
+        'Magnetic State': 'Antiferromagnetic (AFM)'
+    })
+    
+    # Combine the two datasets into one table
+    df = pd.concat([df_fm, df_afm], ignore_index=True)
+    
+    # 'paper' context, clean ticks
+    sns.set_theme(context="paper", style="ticks")
+
+    # Font and Axis sizing for APS formatting (8-10 pt)
+    plt.rcParams.update({
+        'font.family': 'sans-serif',
+        'font.sans-serif': ['Arial', 'Helvetica', 'DejaVu Sans'],
+        'axes.labelsize': 9,       # Axis titles
+        'xtick.labelsize': 8,      # X-axis numbers
+        'ytick.labelsize': 8,      # Y-axis numbers
+        'legend.fontsize': 7.5,    # Legend text
+        'axes.linewidth': 0.8,     # Bounding box line thickness
+        'xtick.major.width': 0.8,  # Tick thickness
+        'ytick.major.width': 0.8
+    })
+
+    # 3. Figure Size: PRB single column is exactly 3.375 inches wide. 
+    fig, ax = plt.subplots(figsize=(3.375, 2.6), dpi=600)
+
+    # 4. Color Palette (Explicit dictionary: FM = Red, AFM = Blue)
+    prb_palette = {
+        'Ferromagnetic (FM)': '#d62728',     # Red
+        'Antiferromagnetic (AFM)': '#1f77b4' # Blue
+    } 
+
+    # Draw the plot
+    sns.lineplot(
+        data=df,
+        x=f'{straintype} Strain (%)',
+        y='Relative Energy (eV)',
+        hue='Magnetic State',     
+        style='Magnetic State',   
+        markers=['o', 's'],       
+        dashes=False,             
+        linewidth=1.2,            
+        markersize=5,             
+        palette=prb_palette,      
+        ax=ax
+    )
+
+    # Aesthetics
+    ax.set_xlabel(f'Uniaxial (X) Strain (%)')
+    ax.set_ylabel(r'Relative Energy, $\Delta$E (eV)')
+    
+    # Add a subtle grid
+    ax.grid(True, linestyle='-', linewidth=0.5, alpha=0.3, color='gray')
+    
+    # Despine removes the top and right bounding box lines
+    sns.despine()
+
+    # Clean up the legend 
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles=handles, labels=labels, frameon=False, 
+              loc='upper center', title=None)
+
+    # Use tight layout to prevent clipped labels
+    plt.tight_layout(pad=0.5)
+    
+    # Export as a true vector PDF with transparent background
+    plt.savefig(f'Relaxed-{straintype}.pdf', format='pdf', transparent=True, bbox_inches='tight')
+    print(f"PRB-formatted vector plot saved successfully as Relaxed-{straintype}.pdf!")
+    
     plt.show()
