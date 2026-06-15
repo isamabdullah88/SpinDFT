@@ -24,11 +24,11 @@ Each run produces per-configuration exchange couplings J(r), total energies, and
 **End-to-End Automation**
 Parses ASE structural databases, programmatically constructs `pw.x` and `wannier90.x` input files, and executes the full eight-step MPI pipeline sequentially across hundreds of strained configurations without manual input.
 
-**Dynamic Fermi Energy Calibration**
-Automatically parses and tracks the exact Fermi level from the SCF output to determine the precise number of empty conduction bands required for the NSCF step. This eliminates band over-runs, under-runs, and the "empty shells" errors that commonly crash Wannierization on novel systems.
+**Custom Quantum ESPRESSO v7.5 Integration**
+ASE does not fully support Quantum ESPRESSO v7.5. SpinDFT supplies the missing integration layer directly in code: custom parsing of total energies, atomic forces, and Fermi levels from raw QE v7.5 output, and programmatic injection of Hubbard U parameters into the calculation inputs. This ensures reliable data capture and correct DFT+U setup where standard tooling falls short.
 
-**Crash-Proof Diagonalization**
-Enforces Conjugate Gradient (`cg`) diagonalization during NSCF steps to prevent LAPACK segmentation faults when computing large arrays of empty conduction bands — a known failure mode with the default Davidson algorithm at high band counts.
+**Dynamic Fermi-Level Anchoring**
+Parses the exact Fermi level from each SCF run and uses it to set the energy window for the NSCF step, so that the Wannierization targets the correct bands. This prevents the misaligned energy windows that otherwise cause Wannier projection to fail on novel systems.
 
 **Intelligent Storage Management**
 Implements Just-In-Time (JIT) deletion of wavefunction and charge density files immediately after each step consumes them. This enables high-throughput DFT over dense k-meshes to operate safely within HPC disk quota constraints that would otherwise be exceeded within the first few dozen configurations.
@@ -81,9 +81,9 @@ Structure (ASE .db)
 
 3. **Atomic Rattling** — Applies Gaussian random displacements (σ = 0.02 and 0.04 Å) to the relaxed atomic positions, generating multiple configurations per strain state to sample the local energy landscape and improve training set diversity.
 
-4. **SCF** — Converges the ground-state charge and spin density using GGA-PBE with a Hubbard U = 3.0 eV on Cr 3d orbitals (DFT+U, Dudarev scheme) and Grimme D3 van der Waals corrections. Produces the reference Fermi energy used dynamically in step 5.
+4. **SCF** — Converges the ground-state charge and spin density using GGA-PBE with a Hubbard U = 3.0 eV on Cr 3d orbitals (DFT+U, Dudarev scheme, injected programmatically as ASE lacks native v7.5 support) and Grimme D3 van der Waals corrections. Produces the reference Fermi energy parsed and used dynamically in step 5.
 
-5. **NSCF** — Computes a large number of unoccupied bands over a dense k-mesh (36×36×1). Band count is set dynamically from the Fermi level parsed in step 4.
+5. **NSCF** — Computes a large number of unoccupied bands over a dense k-mesh (36×36×1), with band count set dynamically from the Fermi level parsed in step 4. Uses conjugate-gradient diagonalization, which is more stable than the default Davidson algorithm at the high empty-band counts Wannierization requires.
 
 6. **pw2wannier90** — Extracts Bloch overlaps and projections onto Cr-d and I-p atomic orbitals from the NSCF wavefunctions.
 
